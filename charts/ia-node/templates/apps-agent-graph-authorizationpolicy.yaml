@@ -1,0 +1,78 @@
+{{- /*
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+*/}}
+
+{{- if and .Values.istio.enabled .Values.apps.graph.enabled -}}
+
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-graph
+  labels:
+    {{- include "ia-node.labels" $ | nindent 4 }}
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - {{.Values.istio.principal}}
+      to:
+        - operation:
+            methods:
+              - GET
+              - POST
+            paths:
+              - /knowledge/sparql
+              - /knowledge/sparql/*
+              - /knowledge/query
+              - /knowledge/query/*
+              - /ontology/sparql
+              - /ontology/sparql/*
+              - /ontology/query
+              - /ontology/query/*
+              - /catalog/sparql
+              - /catalog/sparql/*
+              - /catalog/query
+              - /catalog/query/*
+        - operation:
+            methods:
+              - POST
+            paths:
+              - /knowledge/graphql
+              - /knowledge/graphql/*
+              - /knowledge/shacl
+              - /knowledge/shacl/*
+      when:
+        - key: 'request.auth.claims[groups]'
+          values:
+            - {{.Values.istio.groupClaimNames.read }}
+  selector:
+    matchLabels:
+      {{- toYaml .Values.apps.graph.componentSelectorLabels | nindent 6 }}
+
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-graph-server-to-api
+  labels:
+    {{- include "ia-node.labels" $ | nindent 4 }}
+    {{- toYaml .Values.apps.api.componentSelectorLabels | nindent 4 }}
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: 
+            - {{ printf "cluster.local/ns/%s/sa/graph-server" .Release.Namespace }}
+      to:
+        - operation:
+            methods:
+              - "GET"
+  selector:
+    matchLabels:
+      {{- toYaml .Values.apps.api.componentSelectorLabels | nindent 6 }}
+
+{{- end }}

@@ -1,0 +1,159 @@
+{{- /*
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+*/}}
+
+{{- range .Values.apps }}
+--- 
+{{- if and .enabled .deployment }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  {{- with .componentSelectorLabels }}
+  labels:
+    {{- include "ia-node.labels" $ | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .deployment.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .deployment.replicas }}
+  revisionHistoryLimit: 3
+  selector:
+    {{- with .componentSelectorLabels }}  
+    matchLabels:
+      {{- include "ia-node.selectorLabels" $ | nindent 6 }}
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      {{- with .componentSelectorLabels }}  
+      labels:
+        {{- include "ia-node.selectorLabels" $ | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      containers:
+      - name: {{ .name }}
+        image: "{{ .deployment.image.repository }}:{{ .deployment.image.tag }}"
+        imagePullPolicy: Always
+        ports:
+        - containerPort:  {{ .deployment.containerPort }}
+          name: http
+          protocol: TCP
+        resources:
+          {{- toYaml .deployment.resources | nindent 10 }}
+        livenessProbe:
+          {{- toYaml .deployment.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .deployment.readinessProbe | nindent 10 }}
+        env:
+          {{- with .deployment.env }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- if contains .name "access-api" }}
+          - name: MONGO_PWD
+            valueFrom:
+              secretKeyRef:
+                key: password
+                name: {{ $.Values.mongodb.secret.name }}
+          {{- end }}
+          {{- if and (contains .name "access-api") ($.Values.mongodb.extraCerts.required) }}
+          - name: MONGO_SSL_CERT
+            value: /etc/ssl/certs/{{ $.Values.mongodb.extraCerts.name }}
+          {{- end }}
+          {{- if $.Values.extraCerts.required }}
+          - name: NODE_EXTRA_CA_CERTS
+            value: /etc/ssl/certs/{{ $.Values.extraCerts.name }}
+          {{- end }}
+        envFrom:
+          {{- toYaml .deployment.envFrom | nindent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsGroup: 10101
+          runAsNonRoot: true
+          runAsUser: 10101
+          seccompProfile:
+            type: RuntimeDefault
+        volumeMounts: 
+          {{- with .deployment.volumeMounts }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- if $.Values.extraCerts.required }}
+          - name: {{ $.Values.extraCerts.configMapRef }}
+            mountPath: "/etc/ssl/certs/{{ $.Values.extraCerts.name }}"
+            subPath: {{ $.Values.extraCerts.name }}
+          {{- end }}
+          {{- if and (contains .name "access-api") ($.Values.mongodb.extraCerts.required) }}
+          - name: {{ $.Values.mongodb.extraCerts.configMapRef }}
+            mountPath: "/etc/ssl/certs/{{ $.Values.mongodb.extraCerts.name }}"
+            subPath: {{ $.Values.mongodb.extraCerts.name }}
+          {{- end }}
+          {{- if $.Values.mongodb.secret.providerClassEnabled }}
+          - name: secrets-store
+            mountPath: "/mnt/secrets-store"
+            readOnly: true
+          {{- end }}
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        fsGroup: 10101
+        runAsGroup: 10101
+        runAsNonRoot: true
+        runAsUser: 10101
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: {{ .name }}
+      
+      volumes:
+        {{- with .deployment.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if $.Values.extraCerts.required }}
+        - name: {{ $.Values.extraCerts.configMapRef }}
+          configMap:
+            name: {{ $.Values.extraCerts.configMapRef }}
+        {{- end }}
+        {{- if and (contains .name "access-api") ($.Values.mongodb.extraCerts.required) }}
+        - name: {{ $.Values.mongodb.extraCerts.configMapRef }}
+          configMap:
+            name: {{ $.Values.mongodb.extraCerts.configMapRef }}
+        {{- end }}        
+        {{- if $.Values.mongodb.secret.providerClassEnabled }}
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ $.Values.mongodb.secret.name }}
+        {{- end }}
+      {{- with $.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with $.Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with $.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+{{- end }}
+{{- end }}

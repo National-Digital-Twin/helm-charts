@@ -1,0 +1,25 @@
+CHART: {{ .Chart.Name }}
+CHART VERSION: {{ .Chart.Version }}
+RELEASE NAME: {{ .Release.Name }}
+
+Main install 
+
+    List config maps:
+        kubectl get configmap -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+    List secrets:
+        kubectl get secret -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+    List virtual services:
+        kubectl get virtualservices.networking.istio.io -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+    List authorization policies:
+        kubectl get authorizationpolicies.security.istio.io -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+Additional Istio install under Istio namespace provided
+
+    List authorization policies:
+        kubectl get authorizationpolicies.security.istio.io -n {{ .Values.istio.namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+    List request authentication:
+        kubectl get authorizationpolicies.security.istio.io -n {{ .Values.istio.namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}

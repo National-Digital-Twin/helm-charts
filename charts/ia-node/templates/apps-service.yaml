@@ -1,0 +1,61 @@
+{{- /*
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+*/}}
+
+{{- range .Values.apps }}
+--- 
+{{- if and .enabled .service}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  {{- with .componentSelectorLabels }}
+  labels:
+    {{- include "ia-node.labels" $ | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if contains .name "access-api" }} 
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  {{- end }}
+  {{- if contains .name "access-ui" }} 
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  {{- end }}
+  {{- if contains .name "graph-server" }} 
+  ports:
+  - name: http
+    port: 3030
+    protocol: TCP
+    targetPort: 3030
+  - name: metrics
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  {{- end }}
+  {{- if contains .name "query-ui" }} 
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  {{- end }}
+  {{- with .componentSelectorLabels }}
+  selector:
+    {{- include "ia-node.selectorLabels" $ | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

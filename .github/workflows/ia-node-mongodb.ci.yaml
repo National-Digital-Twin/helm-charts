@@ -1,0 +1,83 @@
+name: Helm Chart ia-node-mongodb CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+    - 'charts/ia-node-mongodb/**'
+    - '!**.md'
+    
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+    - 'charts/ia-node-mongodb/**'
+    - '!**.md'
+    
+env:
+  CHART_DIR: ./charts/
+  PACKAGE_NAME: ia-node-mongodb
+  REGISTRY: ${{ github.ref == 'refs/heads/main' && 'ghcr.io/national-digital-twin/helm' || 'ghcr.io/national-digital-twin/helm-test' }}
+
+jobs:
+  check:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.10.0
+
+      - name: Helm lint
+        run: |
+          helm lint $CHART_DIR$PACKAGE_NAME
+
+  release:
+    name: Release
+    needs: check
+    if: ${{ github.event_name != 'pull_request' }}
+    permissions:
+      contents: write
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.10.0
+            
+      - name: login to ghcr using helm
+        shell: bash    
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login $REGISTRY --username ndtp --password-stdin
+
+      - name: Set Version
+        run: |
+          python3 -m pip install pybump
+          version=$(pybump get --file $CHART_DIR$PACKAGE_NAME/Chart.yaml)
+          echo "version=$version" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Helm Package
+        run: |
+          echo "attempt to package with version ${{ env.version }}"
+          helm package $CHART_DIR$PACKAGE_NAME --version ${{ env.version }}
+
+      - name: Helm Chart
+        run : |
+          helm push $PACKAGE_NAME-${{ env.version }}.tgz oci://$REGISTRY
+        shell: bash

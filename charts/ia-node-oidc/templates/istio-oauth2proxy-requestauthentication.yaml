@@ -1,0 +1,53 @@
+{{- /*
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+*/}}
+
+{{- if .Values.istio.enabled  -}}
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: {{ .Values.oidcProvider.type }}
+  namespace: {{ .Values.istio.namespace }}
+  {{- with .Values.oidcProvider.componentSelectorLabels }}
+  labels:
+  {{- include "ia-node-oidc.labels" $ | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with.Values.istio.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- toYaml .Values.app.componentSelectorLabels | nindent 6 }}
+  jwtRules:
+  {{- toYaml .Values.oidcProvider.jwtRules | nindent 6 }}
+
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ .Values.oidcProvider.type }}
+  namespace: {{ .Values.istio.namespace }}
+  {{- with .Values.oidcProvider.componentSelectorLabels }}
+  labels:
+  {{- include "ia-node-oidc.labels" $ | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with.Values.istio.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- toYaml .Values.app.componentSelectorLabels | nindent 6 }}
+  action: ALLOW 
+  rules:
+  - from:
+    - source:
+        requestPrincipals:
+        {{- toYaml .Values.oidcProvider.requestPrincipals | nindent 8 }}
+{{- end }}

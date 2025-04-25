@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+
+istio:
+  annotations: {}
+  enabled: true
+  extraDefaults: false
+  peerAuthenticationMode: STRICT
+  virtualService:
+    enabled: true
+    hosts:
+      - "*"
+    gateways:
+      - istio-system/istio-gateway
+      
+kafkaCluster:
+  name: kafka-cluster
+  connectEnabled: false
+
+  spec:
+    version: 3.9.0
+    kafkaReplicas: 3
+    zookeeperReplicas: 3
+
+  secret:
+    create: true
+    name: kafka-auth-config
+    username: kafka-ia-node-user
+    password: supersecretpassword
+    usernameConnect: kafka-connect-ia-node-user
+    passwordConnect: supersecretpasswordforconnect

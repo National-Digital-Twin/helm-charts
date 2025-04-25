@@ -1,0 +1,15 @@
+CHART: {{ .Chart.Name }}
+CHART VERSION: {{ .Chart.Version }}
+RELEASE NAME: {{ .Release.Name }}
+
+List all:
+    kubectl get all -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+List pods:
+    kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+List virtual services:
+    kubectl get virtualservices.networking.istio.io -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+List authorization policies:
+    kubectl get authorizationpolicies.security.istio.io -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}

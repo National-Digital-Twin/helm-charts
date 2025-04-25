@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+
+istio:
+  enabled: true
+  extraDefaults: false
+  principal: cluster.local/ns/istio-system/sa/ingressgateway
+  peerAuthenticationMode: STRICT
+  annotations: {}
+  componentSelectorLabels: 
+    istio: ingressgateway
+  namespace: istio-system
+  virtualService:
+    enabled: true
+    hosts:
+      - localhost
+    gateways:
+      - istio-system/istio-gateway
+
+app:
+  componentSelectorLabels:
+    app.kubernetes.io/name: ia-node
+    app.kubernetes.io/instance: ia-node
+
+oidcProvider:
+  type: "keycloak"
+  
+  jwtRules:
+  - forwardOriginalToken: true
+    issuer: "http://keycloak.keycloak.svc.cluster.local/realms/examplerealm"
+    jwksUri: "http://keycloak.keycloak.svc.cluster.local/realms/examplerealm/protocol/openid-connect/certs"
+  
+  requestPrincipals:
+  - "http://keycloak.keycloak.svc.cluster.local/examplerealm/*"
+  
+  componentSelectorLabels:
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/component: oauth2-proxy
+  
+  secret:
+    annotations: {}
+    create: true
+    name: oauth2-proxy-default
+    cookieSecret: "SCVDREM0bCYkSmRreVtuZ0deSiRmNz80a1p3RUZPeEM=" 
+    clientSecret: "4qaUP8ETjxdON2pQLSzHzLCgfISZ1a93"  
+    clientId: "5461f43e-57e1-4e1b-a3e4-4947596e5d04"
+  
+  configMap:
+    create: true
+    annotations: {}
+    name: oauth2-proxy-default
+    issuer_url: "http://keycloak.keycloak.svc.cluster.local/realms/ianode"
+    redirect_url: "https://localhost/oauth2/callback"
+    cookie_domains: "localhost"
+    whitelist_domains: "*"
+    email_domains: "*"
+    logging_enabled: "false"

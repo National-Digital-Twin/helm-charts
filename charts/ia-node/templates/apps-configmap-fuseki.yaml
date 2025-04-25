@@ -1,0 +1,23 @@
+{{- /*
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+*/}}
+
+{{- if and .Values.fusekiConfig.create .Values.apps.graph.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.fusekiConfig.name }}
+  {{- with .Values.apps.graph.componentSelectorLabels }}
+  labels:
+    {{- include "ia-node.labels" $ | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.apps.graph.configMap.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  config.ttl: |-
+    {{- tpl ($.Files.Get "fuseki/config.ttl") . | nindent 4 }}
+{{- end }}

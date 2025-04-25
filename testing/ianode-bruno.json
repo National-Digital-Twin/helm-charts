@@ -1,0 +1,277 @@
+{
+  "name": "ianode",
+  "version": "1",
+  "items": [
+    {
+      "type": "folder",
+      "name": "ianode access api",
+      "filename": "ianode access api",
+      "root": {
+        "meta": {
+          "name": "ianode access api"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "users",
+          "filename": "users.bru",
+          "seq": 1,
+          "request": {
+            "url": "https://{{hostname}}/api/access/users",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Authorization",
+                "value": "Bearer {{token}}",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "whoami",
+          "filename": "whoami.bru",
+          "seq": 2,
+          "request": {
+            "url": "https://{{hostname}}/api/access/whoami",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Authorization",
+                "value": "Bearer {{token}}",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "auth identity provider",
+      "filename": "auth identity provider",
+      "root": {
+        "meta": {
+          "name": "auth identity provider"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "UI Client JWT (Test Only)",
+          "filename": "UI Client JWT (Test Only).bru",
+          "seq": 2,
+          "request": {
+            "url": "https://{{idp-hostname}}/realms/ianode/protocol/openid-connect/token",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/x-www-form-urlencoded",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "formUrlEncoded",
+              "formUrlEncoded": [
+                {
+                  "name": "client_id",
+                  "value": "{{ui-client-id}}",
+                  "enabled": true
+                },
+                {
+                  "name": "client_secret",
+                  "value": "{{ui-client-secret}}",
+                  "enabled": true
+                },
+                {
+                  "name": "grant_type",
+                  "value": "client_credentials",
+                  "enabled": true
+                }
+              ],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {
+              "res": "bru.setVar(\"token\", res.body.access_token);"
+            },
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "API User JWT",
+          "filename": "API User JWT.bru",
+          "seq": 1,
+          "request": {
+            "url": "https://{{idp-hostname}}/realms/ianode/protocol/openid-connect/token",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/x-www-form-urlencoded",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "formUrlEncoded",
+              "formUrlEncoded": [
+                {
+                  "name": "client_id",
+                  "value": "{{api-client-id}}",
+                  "enabled": true
+                },
+                {
+                  "name": "grant_type",
+                  "value": "password",
+                  "enabled": true
+                },
+                {
+                  "name": "username",
+                  "value": "{{email}}",
+                  "enabled": true
+                },
+                {
+                  "name": "password",
+                  "value": "{{password}}",
+                  "enabled": true
+                }
+              ],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {
+              "res": "bru.setVar(\"token\", res.body.access_token);"
+            },
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "activeEnvironmentUid": "jxM0TdylcX2UFooGUDM8c",
+  "environments": [
+    {
+      "variables": [
+        {
+          "name": "hostname",
+          "value": "localhost",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "idp-hostname",
+          "value": "localhost-oidc",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "ui-client-id",
+          "value": "5461f43e-57e1-4e1b-a3e4-4947596e5d04",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "api-client-id",
+          "value": "079ff956-38c6-46f4-a03c-acc09addd173",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "ui-client-secret",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "password",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "email",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        }
+      ],
+      "name": "ianode"
+    }
+  ],
+  "root": {
+    "request": {
+      "auth": {
+        "mode": "bearer",
+        "bearer": {
+          "token": ""
+        }
+      }
+    }
+  },
+  "brunoConfig": {
+    "version": "1",
+    "name": "ianode",
+    "type": "collection",
+    "ignore": [
+      "node_modules",
+      ".git"
+    ],
+    "size": 0.003597259521484375,
+    "filesCount": 8
+  }
+}

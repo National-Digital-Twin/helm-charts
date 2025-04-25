@@ -1,0 +1,43 @@
+.DS_Store
+
+# Common backup files
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+
+# Log and Debug files
+*.log
+*.out
+
+# Ignore editor/IDE files
+.project
+.idea/
+*.tmproj
+.vscode/
+
+# Ignore private and/or sensitive files
+*.cer
+*.crt
+*.csr
+*.pfx
+*.pem
+*.key
+*.jks
+*.p8
+*.p12
+*.keystore
+id_rsa
+id_rsa.pub
+
+# Overrides
+*.overrides.yaml
+overrides.yaml
+
+overrides.yaml
+
+# Secret Files
+*.crt
+*.key
+*.env

@@ -1,0 +1,50 @@
+{{- /*
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+*/}}
+
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: {{.Values.mongodb.name}}
+  {{- with .Values.mongodb.componentSelectorLabels }}
+  labels:
+    {{- include "ia-node-mongodb.labels" $ | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.mongodb.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  members: {{.Values.mongodb.spec.members}}
+  type: ReplicaSet
+  version: {{.Values.mongodb.spec.version}}
+  security:
+    tls:
+      enabled: {{ .Values.mongodb.spec.security.tls.enabled }}
+      {{- if .Values.mongodb.spec.security.tls.enabled }}
+      certificateKeySecretRef:
+        name: {{ .Values.mongodb.spec.security.tls.certificateKeySecretRef }}
+      caCertificateSecretRef:
+        name: {{ .Values.mongodb.spec.security.tls.caCertificateSecretRef }}
+      {{- end }}
+    authentication:
+      {{- if .Values.mongodb.spec.security.tls.useX509 }}
+      modes: ["X509"]
+      {{- else }}
+      modes: ["SCRAM-SHA-1"]
+      {{- end }}
+  users:
+  - name: {{.Values.mongodb.users.default.name }}
+    db: {{.Values.mongodb.users.default.db }}
+    passwordSecretRef:
+      name: {{ .Values.mongodb.secret.name }}
+    roles:
+      {{- range .Values.mongodb.users.default.roles }}
+      - name: {{.}}
+        db: {{$.Values.mongodb.users.default.db }}
+      {{- end }}
+    scramCredentialsSecretName: my-scram
+  additionalMongodConfig:
+    storage.wiredTiger.engineConfig.journalCompressor: zlib

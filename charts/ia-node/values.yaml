@@ -1,0 +1,321 @@
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+
+istio:
+  annotations: {}
+  enabled: true
+  extraDefaults: true
+  principal: cluster.local/ns/istio-system/sa/istio-ingressgateway
+  virtualService:
+    hosts:
+      - localhost
+    gateways:
+      - istio-system/istio-gateway 
+  groupClaimNames:
+    admin: "ianode_admin"
+    read: "ianode_read"
+    write: "ianode_write"
+    
+extraCerts: 
+  required: false
+  name: root-ca.pem
+  configMapRef: root-certs
+
+imagePullSecrets: []
+
+fusekiConfig:
+  create: true
+  name: "graph-server-fuseki"
+  prefix: "ndtp.co.uk"
+  jaContextValue: "uk.gov.dbt.ndtp.jena.graphql.execution.ianode.graph.IANodeGraphExecutor"
+
+mongodb:
+  extraCerts:
+    required: false
+    name: mongo-ca.pem
+    configMapRef: mongo-certs 
+  secret:
+    create: false
+    name: "ia-node-user-password" 
+    providerClassEnabled: false
+    provider: default
+    objectName: default
+    objectType: default
+    password: supersecretpassword
+    annotations: {}
+
+kafkaCluster:
+  bootstrapServers: "kafka-cluster-kafka-bootstrap:9093" 
+  secret:
+    create: false
+    name: kafka-auth-config
+    annotations: {}
+    username: kafka-ia-node-user
+    password: supersecretpassword
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+apps: 
+  api:
+    name: access-api
+    enabled: true
+    componentSelectorLabels:
+      app: access-api
+      app.kubernetes.io/component: access-api
+
+    service:
+      annotations: {}
+
+    serviceAccount:
+      annotations: {}
+
+    deployment:
+      annotations: {}
+      replicas: 1
+      containerPort: 8080
+      image:
+        repository: ghcr.io/national-digital-twin/ianode-access
+        tag: 0.90.0
+      resources:
+        limits:
+          cpu: 250m
+          memory: 512Mi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+      envFrom:
+      - configMapRef:
+          name: access-api
+
+    configMap:
+      annotations: {}
+      data:
+        DEBUG: "false"
+        DEPLOYED_DOMAIN: https://localhost
+        MONGO_COLLECTION: access
+        MONGO_PROTOCOL: mongodb
+        MONGO_URL: mongodb-svc:27017
+        MONGO_USER: ia-node-user
+        OPENID_PROVIDER_URL: https://localhost-oidc-provider
+        PORT: "8080"
+        SCIM_ENABLED: "false"
+
+  ui:
+    name: access-ui
+    enabled: false
+    componentSelectorLabels:
+      app: access-ui
+      app.kubernetes.io/component: access-ui
+
+    service:
+      annotations: {}
+
+    serviceAccount:
+      annotations: {}
+
+    deployment:
+      annotations: {}
+      replicas: 1
+      containerPort: 80
+      image:
+        repository: ghcr.io/national-digital-twin/access-ui ### currently unsupported and just a placeholder only
+        tag: latest
+      resources:
+        limits:
+          cpu: 250m
+          memory: 512Mi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+      livenessProbe:
+        httpGet:
+          path: /access/health
+          port: 8080
+          scheme: HTTP
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        timeoutSeconds: 2
+      readinessProbe:
+        httpGet:
+          path: /access/health
+          port: 8080
+          scheme: HTTP
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        timeoutSeconds: 2
+      volumes:
+      - configMap:
+          name: access-ui
+        name: access-ui-volume
+      volumeMounts:
+      - mountPath: /usr/share/nginx/html/access/env-config.js
+        name: access-ui-volume
+        subPath: env-config.js
+    
+    configMap:
+      annotations: {}
+      data:
+        env-config.js: "window.ACCESS_API_URL = \"https://localhost/api/access\"\r\n"
+
+  graph:
+    name: graph-server
+    enabled: false
+    componentSelectorLabels:
+      app: graph-server
+      app.kubernetes.io/component: graph-server
+
+    statefulSet:
+      annotations: {}
+      templateAnnotations: 
+        prometheus.io/path: /
+        prometheus.io/port: "9090"
+        prometheus.io/scrape: "true"
+      replicas: 1
+      image:
+        repository: ghcr.io/national-digital-twin/secure-agent-graph
+        tag: 0.90.0
+      ports:
+      - name: http
+        port: 3030
+        protocol: TCP
+        targetPort: 3030
+      - name: metrics
+        port: 9090
+        protocol: TCP
+        targetPort: 9090
+      resources:
+        limits:
+          cpu: 1500m
+          memory: 12000Mi
+        requests:
+          cpu: 500m
+          memory: 8000Mi
+      envFrom:
+      - configMapRef:
+          name: graph-server
+      - secretRef:
+          name: graph-server
+          optional: true
+      args:
+        - --config
+        - /fuseki/config/config.ttl
+      livenessProbe:
+        httpGet:
+          path: /$/ping
+          port: 3030
+          scheme: HTTP
+        initialDelaySeconds: 120
+        periodSeconds: 30
+        timeoutSeconds: 2
+      readinessProbe:
+        httpGet:
+          path: /$/ping
+          port: 3030
+          scheme: HTTP
+        initialDelaySeconds: 120
+        periodSeconds: 30
+        timeoutSeconds: 2
+      volumes:
+      - configMap:
+          name: graph-server-fuseki
+        name: graph-config-volume
+      - name: kafka-auth-config
+        secret:
+          secretName: kafka-auth-config
+      volumeMounts:
+        - mountPath: /fuseki/config
+          name: graph-config-volume
+        - mountPath: /fuseki/databases
+          name: graph-data-volume
+        - mountPath: /fuseki/labels
+          name: graph-label-volume
+        - mountPath: /app/config/kafka-auth/
+          name: kafka-auth-config
+    volumeClaimTemplates:
+      - name: graph-data-volume
+        accessModes:
+          - ReadWriteOnce
+        storage: 100Gi
+      - name: graph-data-volume
+        accessModes:
+          - ReadWriteOnce
+        storage: 100Gi
+
+    service:
+      annotations: {}
+
+    serviceAccount:
+      annotations: {}
+    
+    configMap:
+      annotations: {}
+      data:
+        ATTRIBUTE_HIERARCHY_URL: http://access-api.svc.cluster.local:8080/hierarchies/lookup/{name}
+        JAVA_OPTIONS: -Xmx5120m -Xms2048m
+        JWKS_URL: https://localhost-oidc-provider/.well-known/jwks.json
+        KAFKA_CONFIG_FILE_PATH: /app/config/kafka-auth/kafka-config.properties
+        OTEL_METRICS_EXPORTER: prometheus
+        OTEL_TRACES_EXPORTER: none
+        SEARCH_API_URL: http://localhost:8181
+        USER_ATTRIBUTES_URL: http://access-api.svc.cluster.local:8080/users/lookup/{user}
+
+  query:
+    name: query-ui
+    enabled: false
+    componentSelectorLabels:
+      app: query-ui
+      app.kubernetes.io/component: query-ui
+
+    service:
+      annotations: {}
+
+    serviceAccount:
+      annotations: {}
+
+    deployment:
+      annotations: {}
+      replicas: 1
+      containerPort: 8080
+      image:
+        repository: ghcr.io/national-digital-twin/query-ui ### currently unsupported and just a placeholder only
+        tag: latest
+      resources:
+        limits:
+          cpu: 125m
+          memory: 512Mi
+        requests:
+          cpu: 125m
+          memory: 512Mi
+      livenessProbe:
+        httpGet:
+          path: /query/health
+          port: 8080
+          scheme: HTTP
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        timeoutSeconds: 2
+      readinessProbe:
+        httpGet:
+          path: /query/health
+          port: 8080
+          scheme: HTTP
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        timeoutSeconds: 2
+      volumes:
+      - configMap:
+          name: query-ui
+        name: query-ui-volume
+      volumeMounts:
+      - mountPath: /usr/share/nginx/html/query/env-config.js
+        name: query-ui-volume
+        subPath: env-config.js
+
+    configMap:
+      annotations: {}
+      data:
+        env-config.js: "window.GRAPHQL_URL = \"https://localhost/api/sparql/knowledge/graphql\";\r\nwindow.BETA= \"true\";\r\nwindow.SPARQL_URL = \"https://localhost/api/sparql/knowledge/sparql\";\r\nwindow.ACCESS_URL= \"https://localhost/api/access\";\r\n"
+    
+

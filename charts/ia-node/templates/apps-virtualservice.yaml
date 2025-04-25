@@ -1,0 +1,146 @@
+
+{{- /*
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+*/}}
+
+{{- if .Values.istio.enabled }}
+{{- if or .Values.apps.api.enabled .Values.apps.ui.enabled .Values.apps.graph.enabled .Values.apps.query.enabled }}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: ia-node
+  labels:
+    {{- include "ia-node.labels" $ | nindent 4 }}
+  {{- with .Values.istio.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  gateways:
+  {{- range .Values.istio.virtualService.gateways }}
+    - {{ . }}
+  {{- end }}
+  hosts:
+  {{- range .Values.istio.virtualService.hosts }}
+    - {{ . }}
+  {{- end }}
+  http:
+  {{- if .Values.apps.api.enabled }}
+  - match:
+    - uri:
+        prefix: /api/access
+    rewrite:
+      uriRegexRewrite:
+        match: ^/api/access(/|$)(.*)
+        rewrite: /\2
+    route:
+    - destination:
+        host: {{ .Values.apps.api.name }}
+        port:
+          number: 8080
+  {{- end }}
+  {{- if .Values.apps.ui.enabled }}
+  - match:
+    - uri:
+        exact: /access
+    redirect:
+      uri: /access/
+  - match:
+    - uri:
+        prefix: /access/
+    route:
+    - destination:
+        host: {{ .Values.apps.ui.name }}
+        port:
+          number: 80
+  {{- end }}
+  {{- if .Values.apps.graph.enabled }}
+  - match:
+    - uri:
+        prefix: /api/sparql/knowledge/sparql
+    rewrite:
+      uri: /knowledge/sparql
+    route:
+    - destination:
+        host: {{ .Values.apps.graph.name }}
+        port:
+          number: 3030
+  - match:
+    - uri:
+        prefix: /api/sparql/knowledge/query
+    rewrite:
+      uri: /knowledge/query
+    route:
+    - destination:
+        host: {{ .Values.apps.graph.name }}
+        port:
+          number: 3030
+  - match:
+    - uri:
+        prefix: /api/sparql/knowledge/graphql
+    rewrite:
+      uri: /knowledge/graphql
+    route:
+    - destination:
+        host: {{ .Values.apps.graph.name }}
+        port:
+          number: 3030
+  - match:
+    - uri:
+        prefix: /api/sparql/ontology/sparql
+    rewrite:
+      uri: /ontology/sparql
+    route:
+    - destination:
+        host: {{ .Values.apps.graph.name }}
+        port:
+          number: 3030
+  - match:
+    - uri:
+        prefix: /api/sparql/ontology/query
+    rewrite:
+      uri: /ontology/query
+    route:
+    - destination:
+        host: {{ .Values.apps.graph.name }}
+        port:
+          number: 3030
+  - match:
+    - uri:
+        prefix: /api/sparql/catalog/sparql
+    rewrite:
+      uri: /catalog/sparql
+    route:
+    - destination:
+        host: {{ .Values.apps.graph.name }}
+        port:
+          number: 3030
+  - match:
+    - uri:
+        prefix: /api/sparql/catalog/query
+    rewrite:
+      uri: /catalog/query
+    route:
+    - destination:
+        host: {{ .Values.apps.graph.name }}
+        port:
+          number: 3030
+  {{- end }}
+  {{- if .Values.apps.query.enabled }}
+  - match:
+    - uri:
+        exact: /query
+    redirect:
+      uri: /query/
+  - match:
+    - uri:
+        prefix: /query/
+    route:
+    - destination:
+        host: {{ .Values.apps.query.name }}
+        port:
+          number: 80
+  {{- end }}
+{{- end }}
+{{- end }}

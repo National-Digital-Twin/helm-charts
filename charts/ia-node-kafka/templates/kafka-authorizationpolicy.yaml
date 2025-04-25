@@ -1,0 +1,34 @@
+{{- /*
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+*/}}
+
+{{- if .Values.istio.enabled -}}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-access-to-kafka
+  labels:
+    {{- include "ia-node-kafka.labels" $ | nindent 4 }}
+spec:
+  action: ALLOW
+  rules:
+  - to:
+    - operation:
+        ports: ["9091","9092","9093"] # Ports used by bootstrap, 9091 replication, 9092 clients, 9093 clients tls
+  - to:
+    - operation:
+        ports: ["9090","8443"] # In addition to those listed by bootstrap, Broker also uses, 9090 control plane, 8443 agent
+  - to:
+    - operation:
+        ports: ["2181", "2888", "3888"] # Ports used by ZooKeeper
+  {{- if .Values.kafkaCluster.connectEnabled  -}}
+  - to:
+    - operation:
+        ports: ["8083"]  # Ports used Connect
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- toYaml .Values.kafkaCluster.componentSelectorLabels | nindent 6 }}
+{{- end }}

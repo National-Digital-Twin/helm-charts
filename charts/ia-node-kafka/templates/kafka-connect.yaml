@@ -1,0 +1,32 @@
+{{- /*
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+*/}}
+
+{{- if .Values.kafkaCluster.connectEnabled  -}}
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnect
+metadata:
+  name: {{.Values.kafkaCluster.secret.username }}-connect
+  annotations:
+    strimzi.io/use-connector-resources: "true"
+spec:
+  version: {{.Values.kafkaCluster.spec.version}}
+  replicas: 1
+  bootstrapServers: {{ .Values.kafkaCluster.name }}-kafka-bootstrap:9093
+  tls:
+    trustedCertificates:
+      - secretName: {{ .Values.kafkaCluster.name }}-cluster-ca-cert
+        pattern: "*.crt"
+  authentication:
+    type: scram-sha-512
+    username: {{  .Values.kafkaCluster.secret.usernameConnect }}
+    passwordSecret:
+      secretName: {{  .Values.kafkaCluster.secret.usernameConnect }}
+      password: password
+  config:
+    group.id: connect-cluster
+    offset.storage.topic: connect-cluster-offsets
+    config.storage.topic: connect-cluster-configs
+    status.storage.topic: connect-cluster-status
+{{- end }}

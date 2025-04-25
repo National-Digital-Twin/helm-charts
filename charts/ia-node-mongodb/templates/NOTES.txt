@@ -1,0 +1,25 @@
+CHART: {{ .Chart.Name }}
+CHART VERSION: {{ .Chart.Version }}
+RELEASE NAME: {{ .Release.Name }}
+
+List all:
+    kubectl get all -n {{ .Release.Namespace }} -l app=mongodb-svc
+
+List pods:
+    kubectl get pods -n {{ .Release.Namespace }} -l app=mongodb-svc
+
+List MongoDB:
+    kubectl get MongoDBCommunity -n {{ .Release.Namespace }}
+
+List virtual services:
+    kubectl get virtualservices.networking.istio.io -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+List authorization policies:
+    kubectl get authorizationpolicies.security.istio.io -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+Check the generated user password:
+    kubectl get secret {{ .Values.mongodb.secret.name }} -n {{ .Release.Namespace }} -o json | jq -r '.data | with_entries(.value |= @base64d)'
+
+    or
+
+    kubectl get secret {{ .Values.mongodb.secret.name }} -n {{ .Release.Namespace }} -o jsonpath="{.data['password']}" | base64 -d
