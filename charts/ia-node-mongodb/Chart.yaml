@@ -5,4 +5,4 @@ apiVersion: v2
 name: ia-node-mongodb
 description: A Helm chart for Kubernetes
 type: application
-version: 0.90.0
+version: 0.0.1
