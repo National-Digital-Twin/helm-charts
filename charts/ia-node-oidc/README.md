@@ -33,7 +33,7 @@ This chart has been developed to provide an example for deploying oAuth2 Proxy, 
 > You can either generate a secret called `oauth2-proxy-default` yourself, or secret creation to true as below with your [cookie secret](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview/) and keycloak client id and secret which will generate a secret for you. The config map and optional secret output from the package, can then be used to override the oauth2 Proxy installation. 
 
 ```sh
-helm install ia-node-oidc oci://ghcr.io/national-digital-twin/helm/ia-node-oidc -n ia-node --set oidcProvider.configMap.redirect_url="https://localhost/oauth2/callback" 
+helm install ia-node-oidc oci://ghcr.io/national-digital-twin/helm/ia-node-oidc -n ia-node --set oidcProvider.configMap.redirect_url=https://localhost/oauth2/callback --set istio.virtualService.hosts[0]="localhost"
 ```
 
 Optionally, use an overrides.yaml:
@@ -86,7 +86,7 @@ kubectl label namespace ia-node istio-injection=enabled
 Install the latest chart using the following.  
 
 ```sh
-helm install ia-node-oidc oci://ghcr.io/national-digital-twin/helm/ia-node-oidc -n ia-node --set oidcProvider.configMap.redirect_url="https://localhost/oauth2/callback" --set istio.virtualService.hosts[0]="localhost"
+helm install ia-node-oidc oci://ghcr.io/national-digital-twin/helm/ia-node-oidc -n ia-node --set oidcProvider.configMap.redirect_url=https://localhost/oauth2/callback
 ```
 
 Optionally, use an overrides.yaml:
