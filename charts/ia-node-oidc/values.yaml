@@ -13,7 +13,7 @@ istio:
   virtualService:
     enabled: true
     hosts:
-      - localhost
+      - "*"
     gateways:
       - istio-system/istio-gateway
 
@@ -22,20 +22,26 @@ app:
     app.kubernetes.io/name: ia-node
     app.kubernetes.io/instance: ia-node
 
+oAuth2Proxy:
+  componentSelectorLabels:
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/component: oauth2-proxy
+  customAuthorizationPaths:
+    - /
+    - /*
+  customAuthorizationNotPaths: []
+
 oidcProvider:
   type: "keycloak"
   
   jwtRules:
   - forwardOriginalToken: true
-    issuer: "http://keycloak.keycloak.svc.cluster.local/realms/examplerealm"
-    jwksUri: "http://keycloak.keycloak.svc.cluster.local/realms/examplerealm/protocol/openid-connect/certs"
+    issuer: "http://keycloak.keycloak.svc.cluster.local/realms/ianode"
+    jwksUri: "http://keycloak.keycloak.svc.cluster.local/realms/ianode/protocol/openid-connect/certs"
   
   requestPrincipals:
-  - "http://keycloak.keycloak.svc.cluster.local/examplerealm/*"
-  
-  componentSelectorLabels:
-    app.kubernetes.io/name: oauth2-proxy
-    app.kubernetes.io/component: oauth2-proxy
+  - "http://keycloak.keycloak.svc.cluster.local/ianode/*"
+
   
   secret:
     annotations: {}

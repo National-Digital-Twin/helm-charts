@@ -22,9 +22,7 @@ spec:
     - {{ . }}
   {{- end }}
   hosts:
-  {{- range .Values.istio.virtualService.hosts }}
-    - {{ . }}
-  {{- end }}
+    {{- toYaml .Values.istio.virtualService.hosts | nindent 4 }}
   http:
   {{- if .Values.apps.api.enabled }}
   - match:

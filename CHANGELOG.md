@@ -30,7 +30,39 @@ This project follows **Semantic Versioning (SemVer)** ([semver.org](https://semv
 
 ---
 
-## [0.90.0] – 2025-03-28
+## [0.90.1] – 2025-04-30
+
+no updates to ia-node-mongodb. 
+
+### Fix
+
+- ia-node-oidc:
+  - name of the `oidcProvider.componentSelectorLabels` changed to  `oAuth2Proxy.componentSelectorLabels` to reflect the content more accurate
+  - name of realm to in the defaults to use `ianode` rather than just `examplerealm` so that this is more specific for the examples provided 
+
+### Features
+
+- ia-node:
+  - defaults set to local keycloak service for the api and secure graph
+  - revise the default `Fuseki configs` to provide the ability some of the default install options and to install with/without catalog topic
+  - default hosts to "*" to ease local deployment 
+- ia-node-kafka:
+  - add flexibility to override values for the listener and virtual service ports, so these can be overridden
+- ia-node-oidc:
+  - add flexibility to override the both `paths` and `not paths` for the `authenticate-apps` CUSTOM authorization policy
+  - default hosts to "*" to ease local deployment
+
+In addition we have added a scripts folder with a few local development script examples. 
+
+### Additional Notes and Limitations 
+
+- ia-node:
+  - the secure graph component is set to disabled by default at this time, when working with local Kafka Cluster, the Connect component if enabled will have no issues with connecting, however the graph component whilst able to connects, presents a TLS handshake error. Its not believed this to be an issue for cloud equivalent components
+  - there currently are no supported images at this time for the Access UI or Query UI components but these can be enabled and overridden with test images as these become available
+- ia-node-kafka:
+  - the Zookeeper components are going to be deprecated in the future, suggest moving to an alterative i.e. Kraft in the near future
+
+## [0.90.0] – 2025-04-25
 
 ### Initial Public Release (Pre-Stable) 
 
