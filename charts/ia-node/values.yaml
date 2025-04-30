@@ -8,7 +8,7 @@ istio:
   principal: cluster.local/ns/istio-system/sa/istio-ingressgateway
   virtualService:
     hosts:
-      - localhost
+      - "*"
     gateways:
       - istio-system/istio-gateway 
   groupClaimNames:
@@ -27,7 +27,10 @@ fusekiConfig:
   create: true
   name: "graph-server-fuseki"
   prefix: "ndtp.co.uk"
-  jaContextValue: "uk.gov.dbt.ndtp.jena.graphql.execution.ianode.graph.IANodeGraphExecutor"
+  catalogEnabled : false
+  jaContext:
+    graphqlExecutor: "uk.gov.dbt.ndtp.jena.graphql.execution.ianode.graph.IANodeGraphExecutor"
+    queryTimeout: "120000,120000"
 
 mongodb:
   extraCerts:
@@ -98,7 +101,7 @@ apps:
         MONGO_PROTOCOL: mongodb
         MONGO_URL: mongodb-svc:27017
         MONGO_USER: ia-node-user
-        OPENID_PROVIDER_URL: https://localhost-oidc-provider
+        OPENID_PROVIDER_URL: http://keycloak.keycloak.svc.cluster.local/realms/ianode
         PORT: "8080"
         SCIM_ENABLED: "false"
 
@@ -254,7 +257,7 @@ apps:
       data:
         ATTRIBUTE_HIERARCHY_URL: http://access-api.svc.cluster.local:8080/hierarchies/lookup/{name}
         JAVA_OPTIONS: -Xmx5120m -Xms2048m
-        JWKS_URL: https://localhost-oidc-provider/.well-known/jwks.json
+        JWKS_URL: http://keycloak.keycloak.svc.cluster.local/realms/ianode/.well-known/openid-configuration
         KAFKA_CONFIG_FILE_PATH: /app/config/kafka-auth/kafka-config.properties
         OTEL_METRICS_EXPORTER: prometheus
         OTEL_TRACES_EXPORTER: none

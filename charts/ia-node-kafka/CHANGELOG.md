@@ -31,7 +31,15 @@ This project follows **Semantic Versioning (SemVer)** ([semver.org](https://semv
 
 ---
 
-## [0.90.0] – 2025-03-28
+## [0.90.1] – 2025-04-30
+
+### Features
+- add flexibility to override values for the listener and virtual service ports, so these can be overridden
+
+### Additional Notes and Limitations 
+- the Zookeeper components are going to be deprecated in the future, suggest moving to an alterative i.e. Kraft in the near future
+
+## [0.90.0] – 2025-04-25
 
 ### Initial Public Release (Pre-Stable) 
 
@@ -39,7 +47,7 @@ This is the first public release of this repository under NDTP's open-source gov
 Since this release is **pre-1.0.0**, changes may still occur that are **not fully backward-compatible**. 
 
 #### Initial Features 
-- feature: initial Helm chart intended to ease deployment and configuration of Apache Kafka which is a prerequisite required to deploy an IA Node with Graph Enabled
+- initial Helm chart intended to ease deployment and configuration of Apache Kafka which is a prerequisite required to deploy an IA Node with Graph Enabled
 
 #### Known Limitations 
 - Some components are subject to change before `1.0.0`. 

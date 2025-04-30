@@ -9,7 +9,7 @@ kind: AuthorizationPolicy
 metadata:
   name: authenticate-apps
   namespace: {{ .Values.istio.namespace }}
-  {{- with .Values.oidcProvider.componentSelectorLabels }}
+  {{- with .Values.oAuth2Proxy.componentSelectorLabels }}
   labels:
     {{- include "ia-node-oidc.labels" $ | nindent 4 }}
     {{- toYaml . | nindent 4 }}
@@ -26,13 +26,14 @@ spec:
   provider:
     name: oauth2-authz
   rules:
-    - to:
-        - operation:
-            hosts:
-            {{- range .Values.istio.virtualService.hosts }}
-              - {{ . }}
-            {{- end }}
-            paths:
-              - /
-              - /*
+  - to:
+    - operation:
+        hosts: 
+          {{- toYaml .Values.istio.virtualService.hosts | nindent 10 }}
+        paths:
+          {{- toYaml .Values.oAuth2Proxy.customAuthorizationPaths | nindent 10 }}
+        {{- with .Values.oAuth2Proxy.customAuthorizationNotPaths }}
+        notPaths:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
 {{- end }}

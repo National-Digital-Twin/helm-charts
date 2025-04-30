@@ -31,7 +31,21 @@ This project follows **Semantic Versioning (SemVer)** ([semver.org](https://semv
 
 ---
 
-## [0.90.0] – 2025-03-28
+## [0.90.1] – 2025-04-30
+
+### Fix
+- name of the `oidcProvider.componentSelectorLabels` changed to  `oAuth2Proxy.componentSelectorLabels` to reflect the content more accurate
+- name of realm to in the defaults to use `ianode` rather than just `examplerealm` so that this is more specific for the examples provided 
+
+### Features
+- add flexibility to override the both `paths` and `not paths` for the `authenticate-apps` CUSTOM authorization policy
+- default hosts to "*" to ease local deployment
+
+### Additional Notes and Limitations 
+- the Zookeeper components are going to be deprecated in the future, suggest moving to an alterative i.e. Kraft in the near future
+
+
+## [0.90.0] – 2025-04-25
 
 ### Initial Public Release (Pre-Stable) 
 

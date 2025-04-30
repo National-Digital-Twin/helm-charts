@@ -8,7 +8,7 @@ apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
 metadata:
   name: allow-access-to-redis
-  {{- with .Values.oidcProvider.componentSelectorLabels }}
+  {{- with .Values.oAuth2Proxy.componentSelectorLabels }}
   labels:
   {{- include "ia-node-oidc.labels" $ | nindent 4 }}
     {{- toYaml . | nindent 4 }}
