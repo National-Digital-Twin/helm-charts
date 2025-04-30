@@ -141,7 +141,7 @@ apps:
     configMap:
       data:
         DEPLOYED_DOMAIN: https://localhost
-        OPENID_PROVIDER_URL: https://localhost-oidc-provider 
+        OPENID_PROVIDER_URL: http://keycloak.keycloak.svc.cluster.local/realms/ianode
 ```
 
 #### Example Config Override Access UI
@@ -161,7 +161,7 @@ apps:
   graph:
     configMap:
       data:
-        JWKS_URL: https://localhost-oidc-provider/.well-known/jwks.json
+        JWKS_URL: http://keycloak.keycloak.svc.cluster.local/realms/ianode/.well-known/openid-configuration
 
  ```
  
@@ -358,12 +358,14 @@ imagePullSecrets:
 
 ### Fuseki Config
 
-| Name                        | Description                                                               | Value                                                                     |
-| --------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| fusekiConfig.create         | option to create the config map using the config.ttl in this package      | true                                                                      |
-| fusekiConfig.name           | config map name, changins this requires updates to volume mounts          | "graph-server-fuseki"                                                     |
-| fusekiConfig.prefix         | this is the default prefix used in the default config.tll in this package | "ndtp.co.uk"                                                              |
-| fusekiConfig.jaContextValue | default context used in the default config.tll in this package            | "uk.gov.dbt.ndtp.jena.graphql.execution.ianode.graph.IANodeGraphExecutor" |
+| Name                                   | Description                                           | Value                                                                     |
+| -------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------- |
+| fusekiConfig.create                    | create config map with default config.tll             | true                                                                      |
+| fusekiConfig.name                      | config map name, changes require volume mount updates | "graph-server-fuseki"                                                     |
+| fusekiConfig.catalogEnabled            | enabled config.tll including catalog topic            | false                                                                      |
+| fusekiConfig.prefix                    | override prefix for default config.tll                | "ndtp.co.uk"                                                              |
+| fusekiConfig.jaContext.graphqlExecutor | override graphqlExecutor for default config.tll       | "uk.gov.dbt.ndtp.jena.graphql.execution.ianode.graph.IANodeGraphExecutor" |
+| fusekiConfig.jaContext.queryTimeout    | override queryTimeout  for default config.tll         | "120000,120000"                                                           |
 
 ###  MongoDB 
 
@@ -382,13 +384,13 @@ imagePullSecrets:
 
 ###  Kafka 
 
-| Name                              | Description                                                                  | Value                                                |
-| --------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------- |
-| kafkaCluster.bootstrapServers     | overrides the bootstrap server connection                                    | kafka-cluster-kafka-bootstrap:9093 |
-| kafkaCluster.secret.create        | option to create secret or not                                               | false                                                |
-| kafkaCluster.secret.name          | secret name and the name of the reference when specifying alternative secret | kafka-auth-config                                    |
-| kafkaCluster.secret.username      | the default username                                                         | kafka-ia-node-user                                   |
-| kafkaCluster.secret.password      | the default value used in absence of overriding the password                 | supersecretpassword                                  |
+| Name                          | Description                                                                  | Value                              |
+| ----------------------------- | ---------------------------------------------------------------------------- | ---------------------------------- |
+| kafkaCluster.bootstrapServers | overrides the bootstrap server connection                                    | kafka-cluster-kafka-bootstrap:9093 |
+| kafkaCluster.secret.create    | option to create secret or not                                               | false                              |
+| kafkaCluster.secret.name      | secret name and the name of the reference when specifying alternative secret | kafka-auth-config                  |
+| kafkaCluster.secret.username  | the default username                                                         | kafka-ia-node-user                 |
+| kafkaCluster.secret.password  | the default value used in absence of overriding the password                 | supersecretpassword                |
 
 ###  Access Api 
 
@@ -408,7 +410,7 @@ Note: currently access-ui image is not supported yet.
 | apps.ui.enabled                     | toggled the component to be deployed or not              | false                                   |
 | apps.ui.deployment.image.repository | default image repository                                 | ghcr.io/national-digital-twin/access-ui |
 | apps.ui.deployment.image.tag        | default image tag                                        | latest                                  |
-| apps.api.configMap.data             | config map overrides, only the ones listed are mandatory | env-config.js                           |
+| apps.ui.configMap.data              | config map overrides, only the ones listed are mandatory | env-config.js                           |
 
 ###  Secure Agent Graph
 

@@ -12,18 +12,7 @@ spec:
     version: {{.Values.kafkaCluster.spec.version}}
     replicas: {{.Values.kafkaCluster.spec.kafkaReplicas}}
     listeners:
-      - name: plain
-        port: 9092
-        type: internal
-        tls: false
-        authentication:
-          type: scram-sha-512
-      - name: tls
-        port: 9093
-        type: internal
-        tls: true
-        authentication:
-          type: scram-sha-512
+      {{- toYaml .Values.kafkaCluster.listeners | nindent 4 }}
     authorization:
       type: simple
     config:

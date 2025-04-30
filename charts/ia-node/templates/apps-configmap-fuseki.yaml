@@ -18,6 +18,11 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 data:
+  {{- if .Values.fusekiConfig.catalogEnabled }} 
+  config.ttl: |-
+    {{- tpl ($.Files.Get "fuseki/config-catalog.ttl") . | nindent 4 }}
+  {{ else }}
   config.ttl: |-
     {{- tpl ($.Files.Get "fuseki/config.ttl") . | nindent 4 }}
+  {{- end }}
 {{- end }}

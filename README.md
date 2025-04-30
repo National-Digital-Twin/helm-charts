@@ -49,8 +49,11 @@ Note: Versions highlighted are based on what configurations have been used throu
 
 Follow these steps to get started with the charts in this repository. 
 
+> [!NOTE]
+> In all steps replace references to `localhost` with your desired installation domain.
+
 > [!TIP]
-> Replace references to `localhost` with your desired installation domain and `localhost-oidc` with your own OIDC provider. 
+> There are some example install/uninstall script under the [scripts](./scripts/) folder that you can also use to help get started. 
 
 ### 1. Base Platform Setup
 
@@ -174,6 +177,10 @@ The full configuration and installation can be found in each individual chart in
 - [`ia-node-kafka README.md`](./charts/ia-node-kafka/README.md)
 - [`ia-node README.md`](./charts/ia-node/README.md)
 
+## Verifying Installation
+
+We have included a [Bruno](https://www.usebruno.com/) collection [ianode-bruno.json](\testing\ianode-bruno.json), which can be imported with a couple of the basic api calls, to generate a jwt token, store the generated result and automatically provide this to the api calls as some basic test examples. 
+
 ## Uninstall 
 
 Uninstall in reverse order, i.e.
@@ -190,6 +197,7 @@ helm uninstall my-strimzi-cluster-operator -n kafka-operator
 ```sh
 helm uninstall ia-node-mongodb -n ia-node 
 helm uninstall community-operator -n mongodb-operator 
+helm repo remove mongodb
 ```
 
 ```sh
@@ -203,7 +211,7 @@ helm uninstall keycloak -n keycloak
 
 Uninstall namespaces:
 ```sh
-kubectl delete ns ia-node ia-node-kafka kafka-operator keycloak mongodb-operator
+kubectl delete ns ia-node kafka-operator keycloak mongodb-operator
 ```
 
 ## Features

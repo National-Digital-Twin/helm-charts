@@ -139,7 +139,7 @@ The installation assumes that Istio has already been installed Istio, following 
 
 This chart provides just a basic Istio configuration to support the setup of oAuth2 Proxy using Key Cloak as an example OIDC provider, as we want traffic to redirect to the OIDC provider via oAuth2 Proxy if a token is invalid or does not exist. However Istio will still require to be configured to handle this redirection. An external authorizer can be applied, either globally using the `mesh config` as part of the Istio installation or by applying an `envoy filter`. 
 
-The following is an example of a possible, mesh config that could be applied. 
+The following is an example of a possible, mesh config that could be applied. See more information [here](https://istio.io/latest/docs/tasks/security/authorization/authz-custom/). 
 
 ```yaml
     meshConfig:
@@ -386,9 +386,11 @@ Although oAuth2 Proxy has been the tool, that has been tested against the latest
 
 ###  OAuth2Proxy
 
-| Name                                 | Description                                 | Value                                                                               |
-| ------------------------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| oidcProvider.componentSelectorLabels | application selector lables for OAuth2Proxy | [ app.kubernetes.io/name: oauth2-proxy, app.kubernetes.io/component: oauth2-proxy ] |
+| Name                                    | Description                                       | Value                                                                               |
+| --------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| oAuth2Proxy.componentSelectorLabels     | application selector labels for OAuth2Proxy       | [ app.kubernetes.io/name: oauth2-proxy, app.kubernetes.io/component: oauth2-proxy ] |
+| oAuth2Proxy.customAuthorizationPaths    | paths for OAuth2Proxy custom authorization policy | [ / , /* ]                                                                          |
+| oAuth2Proxy.customAuthorizationNotPaths | paths for OAuth2Proxy custom authorization policy | [  ]                                                                                |
 
 ###  OIDC OAuth2Proxy Secret
 

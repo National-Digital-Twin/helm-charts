@@ -31,7 +31,18 @@ This project follows **Semantic Versioning (SemVer)** ([semver.org](https://semv
 
 ---
 
-## [0.90.0] – 2025-03-28
+## [0.90.1] – 2025-04-30
+
+### Features
+- default to local keycloak service for the api and secure graph
+- revise the default `Fuseki configs` to provide the ability some of the default install options and to install with/without catalog topic
+- default hosts to "*" to ease local deployment 
+
+### Additional Notes and Limitations 
+- the secure graph component is set to disabled by default at this time, when working with local Kafka Cluster, the Connect component if enabled will have no issues with connecting, however the graph component whilst able to connects, presents a TLS handshake error. Its not believed this to be an issue for cloud equivalent components
+- there currently are no supported images at this time for the Access UI or Query UI components but these can be enabled and overridden with test images as these become available
+
+## [0.90.0] – 2025-04-25
 
 ### Initial Public Release (Pre-Stable) 
 
