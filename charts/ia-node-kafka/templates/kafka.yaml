@@ -7,21 +7,29 @@ apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
 metadata:
   name: {{.Values.kafkaCluster.name}}
+  annotations:
+    strimzi.io/node-pools: enabled
 spec:
   kafka:
     version: {{.Values.kafkaCluster.spec.version}}
+    {{- if not .Values.kafkaCluster.spec.kraft.enabled }}
     replicas: {{.Values.kafkaCluster.spec.kafkaReplicas}}
+    {{- end }}
     listeners:
       {{- toYaml .Values.kafkaCluster.listeners | nindent 4 }}
     authorization:
       type: simple
     config:
+      {{- if .Values.kafkaCluster.spec.config }}
+      {{- toYaml .Values.kafkaCluster.spec.config | nindent 6 }}
+      {{- else }}
       offsets.topic.replication.factor: 3
       transaction.state.log.replication.factor: 3
       transaction.state.log.min.isr: 2
       default.replication.factor: 3
       min.insync.replicas: 2
-      inter.broker.protocol.version: "3.9"
+      {{- end }}
+    {{- if not .Values.kafkaCluster.spec.kraft.enabled }}
     storage:
       type: jbod
       volumes:
@@ -29,6 +37,8 @@ spec:
         type: persistent-claim
         size: 1Gi
         deleteClaim: false
+    {{- end }}
+  {{- if not .Values.kafkaCluster.spec.kraft.enabled }}
   zookeeper:
     replicas: {{.Values.kafkaCluster.spec.zookeeperReplicas}}
     template:
@@ -40,6 +50,43 @@ spec:
       type: persistent-claim
       size: 1Gi
       deleteClaim: false
+  {{- end }}
   entityOperator:
     topicOperator: {}
     userOperator: {}
+---
+{{- if .Values.kafkaCluster.spec.kraft.enabled }}
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: broker
+  labels:
+    strimzi.io/cluster: {{.Values.kafkaCluster.name}}
+spec:
+  replicas: {{.Values.kafkaCluster.spec.kraft.brokerReplicas}}
+  roles:
+    - broker
+  storage:
+    type: ephemeral
+  {{- if .Values.kafkaCluster.spec.resources.broker }}
+  resources:
+    {{- toYaml .Values.kafkaCluster.spec.resources.broker | nindent 4 }}
+  {{- end }}
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: controller
+  labels:
+    strimzi.io/cluster: {{.Values.kafkaCluster.name}}
+spec:
+  replicas: {{.Values.kafkaCluster.spec.kraft.controllerReplicas}}
+  roles:
+    - controller
+  storage:
+    type: ephemeral
+  {{- if .Values.kafkaCluster.spec.resources.controller }}
+  resources:
+    {{- toYaml .Values.kafkaCluster.spec.resources.controller | nindent 4 }}
+  {{- end }}
+{{- end }}

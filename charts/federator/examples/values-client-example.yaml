@@ -1,0 +1,182 @@
+# Example values for running the Federator in consumer/client mode
+# Replace placeholder strings with the credentials, certificates and
+# endpoints appropriate for your deployment.
+
+mode: client
+
+images:
+  client:
+    repository: ghcr.io/national-digital-twin/federator/federator-client
+    tag: "0.90.0"
+
+image:
+  pullPolicy: IfNotPresent
+
+service:
+  enabled: false # clients do not expose a gRPC port
+
+redis:
+  passwordSecret:
+    name: redis-auth
+    key: redis-password
+
+config:
+  mountPath: /config
+  serverPropertiesFile: server.properties # unused in client mode
+  clientPropertiesFile: client.properties
+  files:
+    client.properties: |
+      # Kafka destination configuration
+      # The federator-client pulls messages from federator-server via gRPC and writes them to this Kafka cluster
+      # IMPORTANT: This must be configured - there is no default
+      kafka.bootstrapServers=kafka-target:9092
+      kafka.topic.prefix=federated-
+      kafka.sender.defaultKeySerializerClass=org.apache.kafka.common.serialization.ByteArraySerializer
+      kafka.sender.defaultValueSerializerClass=org.apache.kafka.common.serialization.ByteArraySerializer
+      kafka.consumerGroup=federator-client
+      kafka.pollDuration=PT5S
+      kafka.pollRecords=200
+
+      # Kafka authentication - AWS MSK IAM example
+      # NOTE: When using AWS MSK with IAM auth, enable mskIamAuth.enabled=true below
+      #       to automatically download and mount the required authentication library
+      # For SASL/SCRAM-SHA-512, use:
+      #   kafka.additional.security.protocol=SASL_PLAINTEXT (or SASL_SSL)
+      #   kafka.additional.sasl.mechanism=SCRAM-SHA-512
+      #   kafka.additional.sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username="user" password="pass";
+      kafka.additional.security.protocol=SASL_SSL
+      kafka.additional.sasl.mechanism=AWS_MSK_IAM
+      kafka.additional.sasl.jaas.config=software.amazon.msk.auth.iam.IAMLoginModule required;
+      kafka.additional.sasl.client.callback.handler.class=software.amazon.msk.auth.iam.IAMClientCallbackHandler
+
+      # Redis offset/cache configuration
+      redis.host=redis
+      redis.port=6379
+      redis.tls.enabled=false
+      redis.username=${REDIS_USERNAME}
+      redis.prefix=federator-client
+      redis.aes.key=
+
+      # Management node location for dynamic configuration
+      # The federator-client fetches topic subscriptions and scheduling from management-node
+      # Default polling interval: PT10M (10 minutes) if management-node v1.0.x is used
+      # With management-node v1.1.0+, the schedule can be configured in the database
+      management.node.base.url=http://management-node.management-node.svc.cluster.local:8090
+      management.node.cache.ttl.seconds=60
+      management.node.request.timeout=60
+
+      # Secret-backed common configuration
+      common.configuration=/config/common-configuration.properties
+      connections.configuration=/config/connection-configuration.json
+
+    connection-configuration.json: |
+      # IMPORTANT: Configure the gRPC connection to the federator-server
+      # The host should point to the federator-server service, NOT the management-node
+      # This is where the federator-client pulls messages from via gRPC
+      [
+        {
+          "credentials": {
+            "name": "ndtp.dbt.gov.uk",
+            "key": "This-is-the-users-password"
+          },
+          "server": {
+            "name": "FederatorServer1",
+            "host": "federator-server.namespace.svc.cluster.local",
+            "port": 9001
+          },
+          "tls": {
+            "enabled": false
+          }
+        }
+      ]
+
+secretConfig:
+  create: true
+  annotations: {}
+  files:
+    common-configuration.properties: |
+      idp.mtls.enabled=true
+      idp.keystore.path=/config/keystore.p12
+      idp.keystore.password=changeit
+      idp.truststore.path=/config/truststore.p12
+      idp.truststore.password=changeit
+      idp.jwks.url=https://keycloak.example.com/realms/ndtp/protocol/openid-connect/certs
+      idp.token.url=https://keycloak.example.com/realms/ndtp/protocol/openid-connect/token
+      idp.client.id=FEDERATOR_CLIENT
+      idp.token.backoff=1000
+      management.node.base.url=http://management-node.management-node.svc.cluster.local:8090
+    keystore.p12: |
+      # Replace with the base64-encoded PKCS12 keystore used for mTLS
+      BASE64_ENCODED_P12_CONTENT
+    truststore.p12: |
+      # Replace with the base64-encoded truststore containing the IDP CA chain
+      BASE64_ENCODED_TRUSTSTORE_CONTENT
+  items:
+    - key: common-configuration.properties
+      path: common-configuration.properties
+    - key: keystore.p12
+      path: keystore.p12
+    - key: truststore.p12
+      path: truststore.p12
+
+javaOpts: "-Dlogback.configurationFile=/config/logback.xml"
+args: ""
+
+extraEnv:
+  - name: REDIS_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: redis-auth
+        key: redis-username
+  - name: REDIS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: redis-auth
+        key: redis-password
+  - name: AWS_REGION
+    value: eu-west-2
+  - name: LOG_LEVEL
+    value: INFO
+
+# AWS MSK IAM Authentication
+# Enable this when connecting to AWS MSK with IAM authentication
+# The init container will download the required authentication library
+mskIamAuth:
+  enabled: true
+  image:
+    # For air-gapped or private registry deployments, override the repository
+    # repository: your-registry.example.com/docker-hub/curlimages/curl
+    repository: curlimages/curl
+    tag: "8.11.1"
+  # The library will be downloaded to /library and added to the Java classpath
+  # Customize these if needed:
+  # downloadUrl: "https://github.com/aws/aws-msk-iam-auth/releases/download/v2.3.0/aws-msk-iam-auth-2.3.0-all.jar"
+  # jarFileName: "aws-msk-iam-auth-2.3.0-all.jar"
+  # libraryPath: "/library"
+  # volumeName: "msk-lib"
+
+livenessProbe:
+  exec:
+    command:
+      - /bin/sh
+      - -c
+      - "pgrep -f uk.gov.dbt.ndtp.federator.FederatorClient"
+  initialDelaySeconds: 30
+  periodSeconds: 20
+
+readinessProbe:
+  exec:
+    command:
+      - /bin/sh
+      - -c
+      - "pgrep -f uk.gov.dbt.ndtp.federator.FederatorClient"
+  initialDelaySeconds: 15
+  periodSeconds: 10
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: test-message-pod
+description: A Helm chart for deploying test-message-pod for Kafka testing
+type: application
+version: 1.0.0
+appVersion: "1.0.3"
+keywords:
+  - kafka
+  - testing
+  - curl
+maintainers:
+  - name: National Digital Twin Programme

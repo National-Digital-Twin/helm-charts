@@ -1,0 +1,10 @@
+{{- if eq (include "federator.mode" .) "server" }}
+Federator server has been deployed.
+
+It can be reached internally at:
+  {{ include "federator.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+{{- else }}
+Federator client has been deployed.
+
+No service was created because client mode does not expose ports by default.
+{{- end }}

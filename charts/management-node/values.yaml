@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/national-digital-twin/management-node/management-node
+  tag: "1.0.1"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+app:
+  server:
+    port: 8090
+  management:
+    port: 8081
+  ssl:
+    enabled: true
+    clientAuth: need
+    keyStore: /app/docker/keystore.jks
+    keyStorePassword: changeit
+    keyStoreType: JKS
+    trustStore: /app/docker/truststore.jks
+    trustStorePassword: changeit
+    trustStoreType: JKS
+    # certSecret:
+    #   name: "management-client-certs"
+    #   mountPath: /app/docker
+  datasource:
+    url: jdbc:postgresql://localhost:5433/keycloak_db
+    secret:
+      create: false
+      name: "management-node-postgress"
+      usernameKey: username
+      passwordKey: password
+      username: null
+      password: null
+      annotations: {}
+  oauth2:
+    resourceserver:
+      jwt:
+        issuerUri: "http://keycloak.keycloak.svc.cluster.local/realms/management-node"
+        jwkSetUri: "http://keycloak.keycloak.svc.cluster.local/realms/management-node/protocol/openid-connect/certs"
+        jwsAlgorithm: "RS256"
+      opaquetoken:
+        introspectionUri: "http://keycloak.keycloak.svc.cluster.local/realms/management-node/protocol/openid-connect/token/introspect"
+        clientSecret: ""  # Set this value or use --set at deployment time
+  javaOpts: "-Djava.security.egd=file:/dev/./urandom -XX:MaxRAMPercentage=75.0 -Djava.io.tmpdir=/app/tmp"
+  extraEnv: []
+
+service:
+  type: ClusterIP
+  port: 8090
+
+metricsService:
+  enabled: true
+  type: ClusterIP
+  port: 8081
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: management-node.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

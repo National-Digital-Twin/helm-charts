@@ -1,0 +1,132 @@
+# Example values for running the Federator in producer/server mode
+# These values are intended as a starting point. Replace the placeholder
+# secrets and URLs with settings that match your environment.
+
+mode: server
+
+images:
+  server:
+    repository: ghcr.io/national-digital-twin/federator/federator-server
+    tag: "0.90.0"
+
+image:
+  pullPolicy: IfNotPresent
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 9001
+  annotations: {}
+
+redis:
+  passwordSecret:
+    name: oauth2-proxy-redis
+    key: redis-password
+
+config:
+  mountPath: /config
+  serverPropertiesFile: server.properties
+  clientPropertiesFile: client.properties # unused in server mode, retained for completeness
+  files:
+    server.properties: |
+      # Kafka source that the producer reads from
+      kafka.bootstrapServers=kafka-src:9092
+      kafka.consumerGroup=federator-producer
+      kafka.pollDuration=PT5S
+      kafka.pollRecords=100
+
+      # Headers the producer is allowed to share with consumers
+      shared.headers=Content-Type^Security-Label
+      filter.shareAll=false
+
+      # gRPC listener configuration
+      server.port=9001
+      server.mtlsEnabled=true
+      server.keepAliveTime=20000
+
+      # Paths to supporting configuration files
+      common.configuration=/config/common-configuration.properties
+      connections.configuration=/config/connection-configuration.json
+      server.accessMapValueFile=/config/access-map.json
+
+      # Management node and cache configuration
+      management.node.base.url=http://management-node.management-node.svc.cluster.local:8090
+      redis.host=redis-master.ia-node.svc.cluster.local
+      redis.port=6379
+      redis.tls.enabled=false
+      redis.prefix=federator-server
+      redis.username=${REDIS_USERNAME}
+      redis.aes.key=
+
+    connection-configuration.json: |
+      []
+
+    access-map.json: |
+      {}
+
+secretConfig:
+  create: true
+  # name: "federator-server-secrets" # uncomment to hard-code the secret name, otherwise one is generated
+  annotations: {}
+  files:
+    common-configuration.properties: |
+      # Settings shared between producer and consumer
+      idp.mtls.enabled=true
+      idp.keystore.path=/config/keystore.p12
+      idp.keystore.password=changeit
+      idp.truststore.path=/config/truststore.p12
+      idp.truststore.password=changeit
+      idp.jwks.url=https://keycloak.example.com/realms/ndtp/protocol/openid-connect/certs
+      idp.token.url=https://keycloak.example.com/realms/ndtp/protocol/openid-connect/token
+      idp.client.id=FEDERATOR_SERVER
+      management.node.base.url=http://management-node.management-node.svc.cluster.local:8090
+    keystore.p12: |
+      # Replace this placeholder with the base64-encoded PKCS12 keystore payload
+      BASE64_ENCODED_P12_CONTENT
+    truststore.p12: |
+      # Replace this placeholder with the base64-encoded truststore payload
+      BASE64_ENCODED_TRUSTSTORE_CONTENT
+  items:
+    - key: common-configuration.properties
+      path: common-configuration.properties
+    - key: keystore.p12
+      path: keystore.p12
+    - key: truststore.p12
+      path: truststore.p12
+
+javaOpts: "-Dlogback.configurationFile=/config/logback.xml"
+args: ""
+
+extraEnv:
+  - name: REDIS_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: redis-auth
+        key: redis-username
+  - name: REDIS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: redis-auth
+        key: redis-password
+  - name: LOG_LEVEL
+    value: INFO
+
+livenessProbe:
+  tcpSocket:
+    port: grpc
+  initialDelaySeconds: 10
+  periodSeconds: 20
+
+readinessProbe:
+  tcpSocket:
+    port: grpc
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 51Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi

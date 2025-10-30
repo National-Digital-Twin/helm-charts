@@ -5,6 +5,7 @@ istio:
   annotations: {}
   enabled: true
   extraDefaults: true
+  peerAuthenticationMode: "PERMISSIVE"
   principal: cluster.local/ns/istio-system/sa/istio-ingressgateway
   virtualService:
     hosts:
@@ -28,9 +29,16 @@ fusekiConfig:
   name: "graph-server-fuseki"
   prefix: "ndtp.co.uk"
   catalogEnabled : false
+  cqrsEnabled: true
   jaContext:
     graphqlExecutor: "uk.gov.dbt.ndtp.jena.graphql.execution.ianode.graph.IANodeGraphExecutor"
     queryTimeout: "120000,120000"
+  kafkaTopics:
+    knowledge: "knowledge"
+    ontology: "ontology"
+  cqrsTopics:
+    knowledge: "knowledge"
+    ontology: "ontology"
 
 mongodb:
   extraCerts:

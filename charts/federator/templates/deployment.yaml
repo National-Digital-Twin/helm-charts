@@ -1,0 +1,172 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "federator.fullname" . }}
+  labels:
+{{ include "federator.labels" . | indent 4 }}
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+{{ include "federator.selectorLabels" . | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "federator.selectorLabels" . | indent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "federator.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- if .Values.mskIamAuth.enabled }}
+      initContainers:
+        - name: fetch-msk-iam-auth
+          image: {{ .Values.mskIamAuth.image.repository }}:{{ .Values.mskIamAuth.image.tag }}
+          args:
+            - "-sSL"
+            - "{{ .Values.mskIamAuth.downloadUrl }}"
+            - "-o"
+            - "{{ .Values.mskIamAuth.libraryPath }}/{{ .Values.mskIamAuth.jarFileName }}"
+          volumeMounts:
+            - name: {{ .Values.mskIamAuth.volumeName }}
+              mountPath: {{ .Values.mskIamAuth.libraryPath }}
+      {{- end }}
+      containers:
+        - name: federator
+          image: {{ include "federator.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if eq (include "federator.mode" .) "server" }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          {{- end }}
+          env:
+          {{- if eq (include "federator.mode" .) "server" }}
+            - name: FEDERATOR_SERVER_PROPERTIES
+              value: {{ printf "%s/%s" .Values.config.mountPath .Values.config.serverPropertiesFile | quote }}
+          {{- else if eq (include "federator.mode" .) "client" }}
+            - name: FEDERATOR_CLIENT_PROPERTIES
+              value: {{ printf "%s/%s" .Values.config.mountPath .Values.config.clientPropertiesFile | quote }}
+          {{- end }}
+          {{- if .Values.javaOpts }}
+            - name: PROPERTIES
+              value: {{ .Values.javaOpts | quote }}
+          {{- end }}
+          {{- if .Values.args }}
+            - name: ARGS
+              value: {{ .Values.args | quote }}
+          {{- end }}
+          {{- with .Values.extraEnv }}
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          {{- $hasConfig := gt (len .Values.config.files) 0 }}
+          {{- $secretName := include "federator.configSecretName" . }}
+          {{- $secretItems := .Values.secretConfig.items | default (list) }}
+          {{- $hasSecretMounts := and $secretName (gt (len $secretItems) 0) }}
+          {{- $hasExtraMounts := gt (len .Values.extraVolumeMounts) 0 }}
+          {{- $hasMskIamAuth := .Values.mskIamAuth.enabled }}
+          {{- if or $hasConfig $hasSecretMounts $hasExtraMounts $hasMskIamAuth }}
+          volumeMounts:
+          {{- if $hasConfig }}
+            - name: federator-config
+              mountPath: {{ .Values.config.mountPath }}
+              readOnly: true
+          {{- end }}
+          {{- if $hasSecretMounts }}
+          {{- range $item := $secretItems }}
+            - name: federator-secret
+              mountPath: {{ default (printf "%s/%s" $.Values.config.mountPath (default $item.path $item.key)) $item.mountPath }}
+              subPath: {{ default $item.path $item.key }}
+              readOnly: true
+          {{- end }}
+          {{- end }}
+          {{- if $hasMskIamAuth }}
+            - name: {{ .Values.mskIamAuth.volumeName }}
+              mountPath: {{ .Values.mskIamAuth.libraryPath }}
+          {{- end }}
+          {{- with .Values.extraVolumeMounts }}
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+      {{- $hasExtraVolumes := gt (len .Values.extraVolumes) 0 }}
+      {{- $hasConfigVolume := gt (len .Values.config.files) 0 }}
+      {{- $secretName := include "federator.configSecretName" . }}
+      {{- $hasSecretVolume := ne $secretName "" }}
+      {{- $hasMskIamAuth := .Values.mskIamAuth.enabled }}
+      {{- if or $hasConfigVolume $hasSecretVolume $hasExtraVolumes $hasMskIamAuth }}
+      volumes:
+        {{- if $hasConfigVolume }}
+        - name: federator-config
+          configMap:
+            name: {{ include "federator.fullname" . }}-config
+        {{- end }}
+        {{- if $hasSecretVolume }}
+        - name: federator-secret
+          secret:
+            secretName: {{ $secretName }}
+            {{- with .Values.secretConfig.items }}
+            items:
+            {{- range . }}
+              - key: {{ .key }}
+                {{- if .path }}
+                path: {{ .path }}
+                {{- end }}
+            {{- end }}
+            {{- end }}
+        {{- end }}
+        {{- if $hasMskIamAuth }}
+        - name: {{ .Values.mskIamAuth.volumeName }}
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+      {{- end }}

@@ -1,0 +1,163 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "management-node.fullname" . }}
+  labels:
+    helm.sh/chart: {{ include "management-node.chart" . }}
+    app.kubernetes.io/name: {{ include "management-node.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "management-node.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "management-node.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "management-node.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ include "management-node.name" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- $ssl := .Values.app.ssl | default (dict) }}
+          {{- $ds := .Values.app.datasource | default (dict) }}
+          {{- $secret := $ds.secret | default (dict) }}
+          {{- $secretName := include "management-node.datasourceSecretName" . }}
+          {{- $usernameKey := default "username" $secret.usernameKey }}
+          {{- $passwordKey := default "password" $secret.passwordKey }}
+          {{- if not $secretName }}
+          {{- fail "app.datasource.secret.name must be provided" }}
+          {{- end }}
+          ports:
+            - containerPort: {{ .Values.app.server.port }}
+              name: https
+            - containerPort: {{ .Values.app.management.port }}
+              name: management
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.app.server.port }}"
+            - name: MANAGEMENT_SERVER_PORT
+              value: "{{ .Values.app.management.port }}"
+            - name: JAVA_OPTS
+              value: {{ .Values.app.javaOpts | quote }}
+            - name: SERVER_SSL_ENABLED
+              value: "{{ printf "%v" $ssl.enabled }}"
+            {{- with $ssl.clientAuth }}
+            - name: SERVER_SSL_CLIENT_AUTH
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $ssl.keyStore }}
+            - name: SERVER_SSL_KEY_STORE
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $ssl.keyStoreType }}
+            - name: SERVER_SSL_KEY_STORE_TYPE
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $ssl.keyStorePassword }}
+            - name: SERVER_SSL_KEY_STORE_PASSWORD
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $ssl.trustStore }}
+            - name: SERVER_SSL_TRUST_STORE
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $ssl.trustStoreType }}
+            - name: SERVER_SSL_TRUST_STORE_TYPE
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $ssl.trustStorePassword }}
+            - name: SERVER_SSL_TRUST_STORE_PASSWORD
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $ds.url }}
+            - name: SPRING_DATASOURCE_URL
+              value: "{{ . }}"
+            {{- end }}
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ $usernameKey }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ $passwordKey }}
+            {{- $oauth2 := .Values.app.oauth2 | default (dict) }}
+            {{- $resourceserver := $oauth2.resourceserver | default (dict) }}
+            {{- $jwt := $resourceserver.jwt | default (dict) }}
+            {{- $opaquetoken := $resourceserver.opaquetoken | default (dict) }}
+            {{- with $jwt.issuerUri }}
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $jwt.jwkSetUri }}
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $opaquetoken.introspectionUri }}
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_OPAQUETOKEN_INTROSPECTION_URI
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $opaquetoken.clientSecret }}
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_OPAQUETOKEN_CLIENT_SECRET
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $jwt.jwsAlgorithm }}
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWS_ALGORITHM
+              value: "{{ . }}"
+            {{- end }}
+            {{- with .Values.app.extraEnv }}
+{{ toYaml . | indent 12 }}
+            {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          {{- if .Values.app.ssl.certSecret }}
+          volumeMounts:
+            - name: cert-volume
+              mountPath: {{ .Values.app.ssl.certSecret.mountPath }}
+              readOnly: true
+          {{- end }}
+      {{- if .Values.app.ssl.certSecret }}
+      volumes:
+        - name: cert-volume
+          secret:
+            secretName: {{ .Values.app.ssl.certSecret.name }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+      {{- end }}

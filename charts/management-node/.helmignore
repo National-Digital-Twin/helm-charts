@@ -1,0 +1,10 @@
+# Patterns to ignore when building packages.
+# This supports glob patterns.
+
+.DS_Store
+# Common VCS dirs.
+.git/
+.hg/
+.svn/
+# Helm artifacts.
+*.tgz

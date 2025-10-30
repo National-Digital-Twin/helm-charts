@@ -1,0 +1,70 @@
+{{- if .Values.script.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "test-message-pod.fullname" . }}-scripts
+  labels:
+    {{- include "test-message-pod.labels" . | nindent 4 }}
+data:
+  send-kafka-message.sh: |
+    #!/bin/bash
+    
+    # Script to send a complete RDF document as a SINGLE Kafka message with headers
+    # Usage: /opt/scripts/send-kafka-message.sh <message-file>
+    #
+    # IMPORTANT: For federation to work correctly, RDF data must be sent as complete
+    # documents in a single Kafka message. The federator-server expects each message
+    # to contain a complete TriG/Turtle document that can be parsed as a whole.
+    
+    MESSAGE_FILE="${1:-/tmp/data.trig}"
+    BOOTSTRAP_SERVER="${KAFKA_BOOTSTRAP_SERVER:-{{ .Values.kafka.bootstrapServer }}}"
+    TOPIC="${KAFKA_TOPIC:-{{ .Values.kafka.topic }}}"
+    SECURITY_PROTOCOL="${KAFKA_SECURITY_PROTOCOL:-{{ .Values.kafka.securityProtocol }}}"
+    SASL_MECHANISM="${KAFKA_SASL_MECHANISM:-{{ .Values.kafka.saslMechanism }}}"
+    CONTENT_TYPE="${MESSAGE_CONTENT_TYPE:-{{ .Values.message.headers.contentType }}}"
+    SECURITY_LABEL="${MESSAGE_SECURITY_LABEL:-{{ .Values.message.headers.securityLabel }}}"
+    
+    # Read the message content
+    if [ ! -f "$MESSAGE_FILE" ]; then
+      echo "Error: Message file not found: $MESSAGE_FILE"
+      exit 1
+    fi
+    
+    {{- if eq .Values.kafka.securityProtocol "SASL_PLAINTEXT" }}
+    # For SASL_PLAINTEXT, use config from mounted secret
+    CONFIG_FILE="/opt/kafka/config/kafka-config.properties"
+    if [ ! -f "$CONFIG_FILE" ]; then
+      echo "Error: Kafka config file not found: $CONFIG_FILE"
+      exit 1
+    fi
+    {{- end }}
+    
+    # Convert newlines to spaces to ensure the entire RDF document is sent as a single message
+    # This is critical because kafka-console-producer treats each line as a separate message by default
+    PAYLOAD=$(cat "$MESSAGE_FILE" | tr "\n" " ")
+    
+    # Send the message WITH Content-Type header (REQUIRED for federator-server to process RDF correctly)
+    # The federator-server needs Content-Type:application/trig header to parse messages properly
+    {{- if eq .Values.kafka.securityProtocol "SASL_PLAINTEXT" }}
+    echo -e "Content-Type:application/trig\t$PAYLOAD" | \
+      ${KAFKA_HOME}/bin/kafka-console-producer.sh \
+        --bootstrap-server "$BOOTSTRAP_SERVER" \
+        --topic "$TOPIC" \
+        --producer.config "$CONFIG_FILE" \
+        --property parse.headers=true \
+        --property headers.key.separator=: \
+        --property headers.delimiter=$'\t'
+    {{- else }}
+    echo -e "Content-Type:application/trig\t$PAYLOAD" | \
+      ${KAFKA_HOME}/bin/kafka-console-producer.sh \
+        --bootstrap-server "$BOOTSTRAP_SERVER" \
+        --topic "$TOPIC" \
+        --producer-property security.protocol="${SECURITY_PROTOCOL}" \
+        --producer-property sasl.mechanism="${SASL_MECHANISM}" \
+        --property parse.headers=true \
+        --property headers.key.separator=: \
+        --property headers.delimiter=$'\t'
+    {{- end }}
+    
+    echo "Message sent to Kafka topic: $TOPIC as a single message"
+{{- end }}

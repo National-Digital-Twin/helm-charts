@@ -1,0 +1,67 @@
+replicaCount: 1
+
+image:
+  # For local development, build and use a local image:
+  # docker build -t test-message-pod:local .
+  # For Kind: kind load docker-image test-message-pod:local --name kind
+  repository: test-message-pod
+  pullPolicy: Never
+  tag: "local"
+
+# Set to [] for local images, or add your registry secret for private registries
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: "kafka-access-sa"
+
+podLabels:
+  app: test-message-pod
+  purpose: kafka-testing
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+resources:
+  requests:
+    memory: "25Mi"
+    cpu: "10m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# Kafka configuration
+kafka:
+  home: "/tmp/kafka"
+  bootstrapServer: "kafka-cluster-kafka-bootstrap:9092"
+  topic: "knowledge"
+  securityProtocol: "SASL_PLAINTEXT"
+  saslMechanism: "SCRAM-SHA-512"
+  # Path to JAAS config file that will be mounted from secret
+  jaasConfigPath: "/opt/kafka/config/kafka-client.properties"
+
+# Message sending configuration
+message:
+  headers:
+    contentType: "application/trig"
+    securityLabel: "dataset=CarModels-Knowledge,data_category=vehicle,security_tier=public"
+
+# ConfigMap for send-kafka-message.sh script
+script:
+  enabled: true
+
+# Secret containing Kafka credentials (should already exist)
+kafkaCredentialsSecret:
+  name: "kafka-auth-config"
+  enabled: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

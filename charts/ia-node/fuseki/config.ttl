@@ -53,16 +53,18 @@ PREFIX tdb2:    <http://jena.apache.org/2016/tdb#>
 
     ## Updates will be generate an RDF patch which is sent to the Kafka topic.
     ## This exposes update to all users and should only be applied in development environments. Pending access admin/user pools solution.
+{{- if .Values.fusekiConfig.cqrsEnabled }}
     fuseki:endpoint [
         # CQRS update service on "/knowledge/update"
         fuseki:operation cqrs:update ;
         # This name (ja:cxtValue) must agree with the connector below.
         ja:context [
             ja:cxtName "kafka:topic" ;
-            ja:cxtValue "knowledge"
+            ja:cxtValue "{{ .Values.fusekiConfig.cqrsTopics.knowledge | default "knowledge" }}"
         ];
         fuseki:name "update"
     ];
+{{- end }}
 
     fuseki:endpoint [
         # GraphQL operations
@@ -164,15 +166,17 @@ PREFIX tdb2:    <http://jena.apache.org/2016/tdb#>
 
     ## Updates will be generate an RDF patch which is sent to the Kafka topic.
     ## This exposes update to all users and should only be applied in development environments. Pending access admin/user pools solution.
+{{- if .Values.fusekiConfig.cqrsEnabled }}
     fuseki:endpoint [
         # CQRS update service on "/ontology/update"
         fuseki:operation cqrs:update ;
         # This name (ja:cxtValue) must agree with the connector below.
         ja:context [
             ja:cxtName "kafka:topic" ;
-            ja:cxtValue "ontology"
+            ja:cxtValue "{{ .Values.fusekiConfig.cqrsTopics.ontology | default "ontology" }}"
         ];
         fuseki:name "update" ] ;
+{{- end }}
 
     fuseki:endpoint [
         # GraphQL operations
@@ -251,7 +255,7 @@ PREFIX tdb2:    <http://jena.apache.org/2016/tdb#>
 
 <#connector> rdf:type fk:Connector ;
     fk:bootstrapServers    "{{.Values.kafkaCluster.bootstrapServers}}";
-    fk:topic               "knowledge";
+    fk:topic               "{{ .Values.fusekiConfig.kafkaTopics.knowledge | default "knowledge" }}";
     ## This should refer to an authz:upload endpoint
     fk:fusekiServiceName   "/knowledge/upload";
     ## fk:replayTopic -- true for in-memory storage / false for TDB2 storage
@@ -266,7 +270,7 @@ PREFIX tdb2:    <http://jena.apache.org/2016/tdb#>
 
 <#ontologyConnector> rdf:type fk:Connector ;
     fk:bootstrapServers    "{{.Values.kafkaCluster.bootstrapServers}}";
-    fk:topic               "ontology";
+    fk:topic               "{{ .Values.fusekiConfig.kafkaTopics.ontology | default "ontology" }}";
     ## This should refer to an authz:upload endpoint
     fk:fusekiServiceName   "/ontology/upload";
     ## fk:replayTopic -- true for in-memory storage / false for TDB2 storage

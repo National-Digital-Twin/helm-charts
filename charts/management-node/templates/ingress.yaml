@@ -1,0 +1,49 @@
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "management-node.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}
+  labels:
+    helm.sh/chart: {{ include "management-node.chart" . }}
+    app.kubernetes.io/name: {{ include "management-node.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: Helm
+  {{- with .Values.ingress.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $fullName }}
+                port:
+                  number: {{ $svcPort }}
+          {{- else }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}
+                port:
+                  number: {{ $svcPort }}
+          {{- end }}
+    {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+{{- end }}
