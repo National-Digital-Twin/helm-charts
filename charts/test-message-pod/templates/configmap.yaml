@@ -30,8 +30,9 @@ data:
       exit 1
     fi
     
-    {{- if eq .Values.kafka.securityProtocol "SASL_PLAINTEXT" }}
-    # For SASL_PLAINTEXT, use config from mounted secret
+    {{- if hasPrefix "SASL_" .Values.kafka.securityProtocol }}
+    # For SASL_* (e.g. SASL_PLAINTEXT, SASL_SSL), use config from mounted secret.
+    # This is required for JAAS config (and truststore when using SSL).
     CONFIG_FILE="/opt/kafka/config/kafka-config.properties"
     if [ ! -f "$CONFIG_FILE" ]; then
       echo "Error: Kafka config file not found: $CONFIG_FILE"
@@ -45,7 +46,7 @@ data:
     
     # Send the message WITH Content-Type header (REQUIRED for federator-server to process RDF correctly)
     # The federator-server needs Content-Type:application/trig header to parse messages properly
-    {{- if eq .Values.kafka.securityProtocol "SASL_PLAINTEXT" }}
+    {{- if hasPrefix "SASL_" .Values.kafka.securityProtocol }}
     echo -e "Content-Type:application/trig\t$PAYLOAD" | \
       ${KAFKA_HOME}/bin/kafka-console-producer.sh \
         --bootstrap-server "$BOOTSTRAP_SERVER" \
@@ -59,8 +60,6 @@ data:
       ${KAFKA_HOME}/bin/kafka-console-producer.sh \
         --bootstrap-server "$BOOTSTRAP_SERVER" \
         --topic "$TOPIC" \
-        --producer-property security.protocol="${SECURITY_PROTOCOL}" \
-        --producer-property sasl.mechanism="${SASL_MECHANISM}" \
         --property parse.headers=true \
         --property headers.key.separator=: \
         --property headers.delimiter=$'\t'

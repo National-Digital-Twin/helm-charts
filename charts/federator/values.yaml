@@ -46,6 +46,41 @@ config:
   clientPropertiesFile: client.properties
   files: {}
 
+# Optional: render config at runtime from non-secret ConfigMap files + a small Secret of sensitive values.
+# When enabled, an initContainer copies `config.files` into `config.mountPath` and injects secret values.
+# This is useful for keeping large config Secrets small (or eliminating them) while still avoiding secrets in git.
+configRender:
+  enabled: false
+  image:
+    repository: busybox
+    tag: "1.36.1"
+  # Supply secret values to the initContainer.
+  #
+  # Option A (recommended): mount one or more *existing* Secrets via a projected volume.
+  # This avoids creating a combined Secret just for the federator chart.
+  # Each entry can optionally map keys to paths (filenames) under /secrets.
+  #
+  # Example:
+  # secretRefs:
+  #   - name: keycloak-management-node-client
+  #     items:
+  #       - key: client-secret
+  #         path: idp.client.secret
+  #   - name: oauth2-proxy-redis
+  #     items:
+  #       - key: redis-password
+  #         path: redis.password
+  secretRefs: []
+  # Option B (back-compat): name of a single Secret containing the sensitive values.
+  # If set, it will be mounted at /secrets with all keys exposed as files.
+  secretName: ""
+  # Optional: upsert key/value pairs into .properties files.
+  # Each mapping reads `secretKey` from the Secret and sets `property` in `file`.
+  properties: []
+  # Optional: simple placeholder replacement in files.
+  # Each mapping replaces all occurrences of `placeholder` in `file` with the value from `secretKey`.
+  replacements: []
+
 secretConfig:
   create: false
   name: ""

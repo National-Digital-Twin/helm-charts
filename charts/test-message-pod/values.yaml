@@ -4,9 +4,9 @@ image:
   # For local development, build and use a local image:
   # docker build -t test-message-pod:local .
   # For Kind: kind load docker-image test-message-pod:local --name kind
-  repository: test-message-pod
-  pullPolicy: Never
-  tag: "local"
+  repository: Idhere.dkr.ecr.eu-west-2.amazonaws.com/test-message-pod
+  pullPolicy: IfNotPresent
+  tag: "latest"
 
 # Set to [] for local images, or add your registry secret for private registries
 imagePullSecrets: []

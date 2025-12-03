@@ -13,9 +13,10 @@ A simple Helm chart for deploying a test pod to send messages to Kafka for feder
 ### Option 1: Use Pre-built Image (AWS ECR)
 
 ```bash
-helm install test-msg charts/test-message-pod -n org-b \
-  --set kafka.bootstrapServer=kafka-cluster-kafka-bootstrap.org-b.svc.cluster.local:9092 \
+helm install test-msg charts/test-message-pod -n org-a \
+  --set kafka.bootstrapServer=kafka-cluster-kafka-bootstrap.org-a.svc.cluster.local:9092 \
   --set kafka.topic=knowledge \
+  --set kafka.securityProtocol=SASL_PLAINTEXT \
   --set kafkaCredentialsSecret.name=kafka-auth-config
 ```
 
@@ -35,17 +36,18 @@ kind load docker-image test-message-pod:local --name kind
 3. Install the chart with local values:
 ```bash
 cd ../..  # back to helm-charts root
-helm install test-msg charts/test-message-pod -n org-b \
+helm install test-msg charts/test-message-pod -n org-a \
   -f charts/test-message-pod/values-local.yaml
 ```
 
 Or use command-line overrides:
 ```bash
-helm install test-msg charts/test-message-pod -n org-b \
+helm install test-msg charts/test-message-pod -n org-a \
   --set image.repository=test-message-pod \
   --set image.tag=local \
   --set image.pullPolicy=Never \
-  --set kafka.bootstrapServer=kafka-cluster-kafka-bootstrap.org-b.svc.cluster.local:9092 \
+  --set kafka.bootstrapServer=kafka-cluster-kafka-bootstrap.org-a.svc.cluster.local:9092 \
+  --set kafka.securityProtocol=SASL_PLAINTEXT \
   --set kafkaCredentialsSecret.name=kafka-auth-config
 ```
 
@@ -55,16 +57,16 @@ Once deployed, exec into the pod and send messages:
 
 ```bash
 # Send the included test data file
-kubectl exec -n org-b test-msg-test-message-pod -- /opt/scripts/send-kafka-message.sh /tmp/test-data.trig
+kubectl exec -n org-a test-msg-test-message-pod -- /opt/scripts/send-kafka-message.sh /tmp/test-data.trig
 
 # Or create a custom test message
-kubectl exec -n org-b test-msg-test-message-pod -- bash -c 'cat > /tmp/custom-data.trig << EOF
+kubectl exec -n org-a test-msg-test-message-pod -- bash -c 'cat > /tmp/custom-data.trig << EOF
 @prefix ex: <http://example.org/> .
 ex:subject ex:predicate "Test message" .
 EOF'
 
 # Send the custom message
-kubectl exec -n org-b test-msg-test-message-pod -- /opt/scripts/send-kafka-message.sh /tmp/custom-data.trig
+kubectl exec -n org-a test-msg-test-message-pod -- /opt/scripts/send-kafka-message.sh /tmp/custom-data.trig
 ```
 
 ## Configuration
@@ -88,7 +90,7 @@ kubectl exec -n org-b test-msg-test-message-pod -- /opt/scripts/send-kafka-messa
 ### Example: AWS MSK with IAM Authentication
 
 ```bash
-helm install test-msg charts/test-message-pod -n org-b \
+helm install test-msg charts/test-message-pod -n org-a \
   --set kafka.bootstrapServer=b-1.mycluster.kafka.eu-west-2.amazonaws.com:9098 \
   --set kafka.securityProtocol=SASL_SSL \
   --set kafka.saslMechanism=AWS_MSK_IAM \
@@ -99,7 +101,7 @@ helm install test-msg charts/test-message-pod -n org-b \
 ## Uninstall
 
 ```bash
-helm uninstall test-msg -n org-b
+helm uninstall test-msg -n org-a
 ```
 
 ## Development

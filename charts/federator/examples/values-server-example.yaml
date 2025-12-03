@@ -1,13 +1,23 @@
-# Example values for running the Federator in producer/server mode
-# These values are intended as a starting point. Replace the placeholder
-# secrets and URLs with settings that match your environment.
+# Example values for running the Federator in producer/server mode.
+#
+# NO SECRETS IN REPO:
+# This example keeps all large/non-secret config in Helm values (ConfigMap via `config.files`).
+# Sensitive values are sourced from *existing* Kubernetes Secrets (see README) and injected
+# at runtime using the chart's `configRender` initContainer.
+#
+# REQUIRED (for local dev quick-start):
+# - Secret `keycloak-management-node-client` in org-b with key `client-secret`
+# - Secret `oauth2-proxy-redis` in org-b with key `redis-password`
+#
+# NOTE: This example includes a dummy access-map entry (hashed_key/salt) suitable for local dev.
+# Replace it for real deployments.
 
 mode: server
 
 images:
   server:
     repository: ghcr.io/national-digital-twin/federator/federator-server
-    tag: "0.90.0"
+    tag: "1.0.0"
 
 image:
   pullPolicy: IfNotPresent
@@ -18,96 +28,135 @@ service:
   port: 9001
   annotations: {}
 
-redis:
-  passwordSecret:
-    name: oauth2-proxy-redis
-    key: redis-password
-
 config:
   mountPath: /config
   serverPropertiesFile: server.properties
   clientPropertiesFile: client.properties # unused in server mode, retained for completeness
   files:
-    server.properties: |
-      # Kafka source that the producer reads from
-      kafka.bootstrapServers=kafka-src:9092
-      kafka.consumerGroup=federator-producer
-      kafka.pollDuration=PT5S
+    logback.xml: |-
+      <configuration>
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+          <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger - %msg%n</pattern>
+          </encoder>
+        </appender>
+        <root level="INFO">
+          <appender-ref ref="STDOUT"/>
+        </root>
+      </configuration>
+
+    server.properties: |-
+      kafka.bootstrapServers=kafka-cluster-kafka-bootstrap.org-a.svc.cluster.local:9092
+      kafka.defaultKeyDeserializerClass=org.apache.kafka.common.serialization.StringDeserializer
+      kafka.defaultValueDeserializerClass=uk.gov.dbt.ndtp.federator.access.AccessMessageDeserializer
+      kafka.consumerGroup=server.consumer
+      kafka.pollDuration=PT10S
       kafka.pollRecords=100
-
-      # Headers the producer is allowed to share with consumers
-      shared.headers=Content-Type^Security-Label
+      shared.headers=Security-Label^Content-Type
       filter.shareAll=false
-
-      # gRPC listener configuration
       server.port=9001
-      server.mtlsEnabled=true
-      server.keepAliveTime=20000
+      server.mtlsEnabled=false
+      
+      # Kafka authentication
+      # NOTE: the federator code reads Kafka client settings from properties prefixed with `kafka.additional.`.
+      # (It does not currently consume the raw `kafka.properties.file` directly.)
+      kafka.additional.security.protocol=SASL_PLAINTEXT
+      kafka.additional.sasl.mechanism=SCRAM-SHA-512
+      # Injected at runtime from Secret `kafka-ia-node-user` key `sasl.jaas.config`
+      kafka.additional.sasl.jaas.config=
 
-      # Paths to supporting configuration files
+      # (Legacy/unused by current code path, retained for reference)
+      kafka.properties.file=/opt/kafka/config/kafka-config.properties
+
       common.configuration=/config/common-configuration.properties
       connections.configuration=/config/connection-configuration.json
-      server.accessMapValueFile=/config/access-map.json
 
-      # Management node and cache configuration
-      management.node.base.url=http://management-node.management-node.svc.cluster.local:8090
-      redis.host=redis-master.ia-node.svc.cluster.local
+        federator.producer.id=
+
+      management.node.base.url=http://management-node.central-org.svc.cluster.local:8090
+      management.node.request.timeout=60
+      management.node.cache.ttl.seconds=60
+      management.node.api.endpoints.producer=/api/v1/configuration/producer
+
+      redis.host=oauth2-proxy-redis.org-a.svc.cluster.local
       redis.port=6379
       redis.tls.enabled=false
       redis.prefix=federator-server
-      redis.username=${REDIS_USERNAME}
-      redis.aes.key=
+      redis.username=
+      redis.password=
 
-    connection-configuration.json: |
+    common-configuration.properties: |-
+      idp.mtls.enabled=false
+      idp.client.id=management-node
+      idp.client.secret=
+      idp.token.url=http://keycloak.keycloak.svc.cluster.local/realms/management-node/protocol/openid-connect/token
+      idp.jwks.url=http://keycloak.keycloak.svc.cluster.local/realms/management-node/protocol/openid-connect/certs
+      idp.keystore.path=/certs/keystore.p12
+      idp.keystore.password=changeit
+      idp.truststore.path=/certs/truststore.jks
+      idp.truststore.password=changeit
+
+    # Server-side connection config. Keep non-secret. Adjust to your environment.
+    connection-configuration.json: |-
       []
 
-    access-map.json: |
-      {}
+    # Access control map: dummy values for local dev.
+    access-map.json: |-
+      {
+        "Key1": {
+          "registered_client": "Existing_Client",
+          "topics": [],
+          "api": {
+            "hashed_key": "d187446ab510ca50666b5ad150a7806ffe7725c041d92a6b2d4e685d7a7fbdef",
+            "salt": "adefHtfDcseRf6578KjhnSqXcvdf",
+            "issued": "issued_date",
+            "revoked": false
+          },
+          "attributes": {
+            "nationality": "GBR",
+            "clearance": "O",
+            "organisation_type": "NON-GOV"
+          }
+        }
+      }
 
-secretConfig:
-  create: true
-  # name: "federator-server-secrets" # uncomment to hard-code the secret name, otherwise one is generated
-  annotations: {}
-  files:
-    common-configuration.properties: |
-      # Settings shared between producer and consumer
-      idp.mtls.enabled=true
-      idp.keystore.path=/config/keystore.p12
-      idp.keystore.password=changeit
-      idp.truststore.path=/config/truststore.p12
-      idp.truststore.password=changeit
-      idp.jwks.url=https://keycloak.example.com/realms/ndtp/protocol/openid-connect/certs
-      idp.token.url=https://keycloak.example.com/realms/ndtp/protocol/openid-connect/token
-      idp.client.id=FEDERATOR_SERVER
-      management.node.base.url=http://management-node.management-node.svc.cluster.local:8090
-    keystore.p12: |
-      # Replace this placeholder with the base64-encoded PKCS12 keystore payload
-      BASE64_ENCODED_P12_CONTENT
-    truststore.p12: |
-      # Replace this placeholder with the base64-encoded truststore payload
-      BASE64_ENCODED_TRUSTSTORE_CONTENT
-  items:
-    - key: common-configuration.properties
-      path: common-configuration.properties
-    - key: keystore.p12
-      path: keystore.p12
-    - key: truststore.p12
-      path: truststore.p12
-
-javaOpts: "-Dlogback.configurationFile=/config/logback.xml"
+# Use initContainer to copy config.files into /config and inject secret values.
+configRender:
+  enabled: true
+  # Reuse existing secrets; no combined Secret required.
+  secretRefs:
+    - name: keycloak-management-node-client
+      items:
+        - key: client-secret
+          path: idp.client.secret
+    - name: oauth2-proxy-redis
+      items:
+        - key: redis-password
+          path: redis.password
+    - name: kafka-ia-node-user
+      items:
+        - key: sasl.jaas.config
+          path: kafka.jaas.config
+  properties:
+    - secretKey: redis.password
+      file: server.properties
+      property: redis.password
+    - secretKey: idp.client.secret
+      file: common-configuration.properties
+      property: idp.client.secret
+    - secretKey: kafka.jaas.config
+      file: server.properties
+      property: kafka.additional.sasl.jaas.config
 args: ""
 
+javaOpts: >-
+  -Dlogback.configurationFile=/config/logback.xml
+  -Dmanagement.node.request.timeout=30000
+  -Xms256m
+  -Xmx768m
+  -XX:+ExitOnOutOfMemoryError
+
 extraEnv:
-  - name: REDIS_USERNAME
-    valueFrom:
-      secretKeyRef:
-        name: redis-auth
-        key: redis-username
-  - name: REDIS_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: redis-auth
-        key: redis-password
   - name: LOG_LEVEL
     value: INFO
 
@@ -126,7 +175,21 @@ readinessProbe:
 resources:
   requests:
     cpu: 25m
-    memory: 51Mi
+    memory: 1Gi
   limits:
     cpu: 500m
     memory: 1Gi
+
+# The federator server also builds an HttpClient with a JKS truststore.
+# This example reuses the existing `federator-server-certs` secret.
+extraVolumeMounts:
+  - name: certs
+    mountPath: /certs
+    readOnly: true
+
+extraVolumes:
+  - name: certs
+    secret:
+      secretName: federator-server-certs
+
+

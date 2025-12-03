@@ -68,3 +68,6 @@ kafkaCluster:
     password: supersecretpassword
     usernameConnect: kafka-connect-ia-node-user
     passwordConnect: supersecretpasswordforconnect
+    # Security protocol for kafka-config.properties (SASL_PLAINTEXT or SASL_SSL)
+    # Use SASL_PLAINTEXT for local/dev (port 9092), SASL_SSL for production (port 9093)
+    securityProtocol: SASL_PLAINTEXT

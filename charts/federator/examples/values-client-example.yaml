@@ -1,13 +1,25 @@
-# Example values for running the Federator in consumer/client mode
-# Replace placeholder strings with the credentials, certificates and
-# endpoints appropriate for your deployment.
+# Example values for running the Federator in consumer/client mode.
+#
+# NO SECRETS IN REPO:
+# This example keeps all non-secret configuration in Helm values (ConfigMap via `config.files`).
+# Sensitive values are sourced from *existing* Kubernetes Secrets and injected at runtime using
+# the chart's `configRender` initContainer.
+#
+# REQUIRED (in the deployment namespace):
+# - Secret `keycloak-management-node-client` with key `client-secret`
+# - Secret `oauth2-proxy-redis` with key `redis-password`
+# - Secret `kafka-ia-node-user` with key `sasl.jaas.config` (Strimzi KafkaUser)
+# - Secret `federator-client-connection-config` with key `connection-configuration.json`
+#
+# NOTE: `connection-configuration.json` typically contains a client "key" used for authentication,
+# so treat it as sensitive and keep it in a Secret.
 
 mode: client
 
 images:
   client:
     repository: ghcr.io/national-digital-twin/federator/federator-client
-    tag: "0.90.0"
+    tag: "1.0.0"
 
 image:
   pullPolicy: IfNotPresent
@@ -15,126 +27,109 @@ image:
 service:
   enabled: false # clients do not expose a gRPC port
 
-redis:
-  passwordSecret:
-    name: redis-auth
-    key: redis-password
-
 config:
   mountPath: /config
   serverPropertiesFile: server.properties # unused in client mode
   clientPropertiesFile: client.properties
   files:
-    client.properties: |
-      # Kafka destination configuration
-      # The federator-client pulls messages from federator-server via gRPC and writes them to this Kafka cluster
-      # IMPORTANT: This must be configured - there is no default
-      kafka.bootstrapServers=kafka-target:9092
-      kafka.topic.prefix=federated-
-      kafka.sender.defaultKeySerializerClass=org.apache.kafka.common.serialization.ByteArraySerializer
-      kafka.sender.defaultValueSerializerClass=org.apache.kafka.common.serialization.ByteArraySerializer
-      kafka.consumerGroup=federator-client
-      kafka.pollDuration=PT5S
-      kafka.pollRecords=200
+    logback.xml: |-
+      <configuration>
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+          <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger - %msg%n</pattern>
+          </encoder>
+        </appender>
+        <root level="INFO">
+          <appender-ref ref="STDOUT"/>
+        </root>
+      </configuration>
 
-      # Kafka authentication - AWS MSK IAM example
-      # NOTE: When using AWS MSK with IAM auth, enable mskIamAuth.enabled=true below
-      #       to automatically download and mount the required authentication library
-      # For SASL/SCRAM-SHA-512, use:
-      #   kafka.additional.security.protocol=SASL_PLAINTEXT (or SASL_SSL)
-      #   kafka.additional.sasl.mechanism=SCRAM-SHA-512
-      #   kafka.additional.sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username="user" password="pass";
-      kafka.additional.security.protocol=SASL_SSL
-      kafka.additional.sasl.mechanism=AWS_MSK_IAM
-      kafka.additional.sasl.jaas.config=software.amazon.msk.auth.iam.IAMLoginModule required;
-      kafka.additional.sasl.client.callback.handler.class=software.amazon.msk.auth.iam.IAMClientCallbackHandler
+    client.properties: |-
+      # Kafka destination configuration
+      kafka.bootstrapServers=kafka-cluster-kafka-bootstrap.org-a.svc.cluster.local:9092
+      kafka.topic.prefix=DEMOPRODUCERIANODE-
+      kafka.consumerGroup=federator-client
+
+      # REQUIRED: v1.0.0 compatibility
+      kafka.sender.defaultKeySerializerClass=org.apache.kafka.common.serialization.BytesSerializer
+      kafka.sender.defaultValueSerializerClass=org.apache.kafka.common.serialization.BytesSerializer
+
+      # Kafka authentication (Strimzi SCRAM)
+      kafka.additional.security.protocol=SASL_PLAINTEXT
+      kafka.additional.sasl.mechanism=SCRAM-SHA-512
+      # Injected at runtime from Secret `kafka-ia-node-user` key `sasl.jaas.config`
+      kafka.additional.sasl.jaas.config=
 
       # Redis offset/cache configuration
-      redis.host=redis
+      redis.host=oauth2-proxy-redis-master.org-a.svc.cluster.local
       redis.port=6379
       redis.tls.enabled=false
-      redis.username=${REDIS_USERNAME}
+      redis.username=default
+      redis.password=
       redis.prefix=federator-client
-      redis.aes.key=
 
-      # Management node location for dynamic configuration
-      # The federator-client fetches topic subscriptions and scheduling from management-node
-      # Default polling interval: PT10M (10 minutes) if management-node v1.0.x is used
-      # With management-node v1.1.0+, the schedule can be configured in the database
-      management.node.base.url=http://management-node.management-node.svc.cluster.local:8090
-      management.node.cache.ttl.seconds=60
+      # JobRunr dashboard
+      jobs.dashboard.enabled=true
+      jobs.dashboard.port=8085
+
+      # Management node
+      management.node.base.url=http://management-node.central-org.svc.cluster.local:8090
       management.node.request.timeout=60
 
-      # Secret-backed common configuration
+      # Supporting configuration files
       common.configuration=/config/common-configuration.properties
       connections.configuration=/config/connection-configuration.json
 
-    connection-configuration.json: |
-      # IMPORTANT: Configure the gRPC connection to the federator-server
-      # The host should point to the federator-server service, NOT the management-node
-      # This is where the federator-client pulls messages from via gRPC
-      [
-        {
-          "credentials": {
-            "name": "ndtp.dbt.gov.uk",
-            "key": "This-is-the-users-password"
-          },
-          "server": {
-            "name": "FederatorServer1",
-            "host": "federator-server.namespace.svc.cluster.local",
-            "port": 9001
-          },
-          "tls": {
-            "enabled": false
-          }
-        }
-      ]
+    common-configuration.properties: |-
+      idp.mtls.enabled=false
+      # Even when mTLS is disabled, federator builds an HttpClient using this JKS truststore.
+      idp.truststore.path=/certs/truststore.jks
+      idp.truststore.password=changeit
+      idp.jwks.url=http://keycloak.keycloak.svc.cluster.local/realms/management-node/protocol/openid-connect/certs
+      idp.token.url=http://keycloak.keycloak.svc.cluster.local/realms/management-node/protocol/openid-connect/token
+      idp.client.id=management-node
+      idp.client.secret=
+      idp.audience=FEDERATOR_SERVER
+      idp.token.backoff=1000
+      management.node.base.url=http://management-node.central-org.svc.cluster.local:8090
 
 secretConfig:
-  create: true
-  annotations: {}
-  files:
-    common-configuration.properties: |
-      idp.mtls.enabled=true
-      idp.keystore.path=/config/keystore.p12
-      idp.keystore.password=changeit
-      idp.truststore.path=/config/truststore.p12
-      idp.truststore.password=changeit
-      idp.jwks.url=https://keycloak.example.com/realms/ndtp/protocol/openid-connect/certs
-      idp.token.url=https://keycloak.example.com/realms/ndtp/protocol/openid-connect/token
-      idp.client.id=FEDERATOR_CLIENT
-      idp.token.backoff=1000
-      management.node.base.url=http://management-node.management-node.svc.cluster.local:8090
-    keystore.p12: |
-      # Replace with the base64-encoded PKCS12 keystore used for mTLS
-      BASE64_ENCODED_P12_CONTENT
-    truststore.p12: |
-      # Replace with the base64-encoded truststore containing the IDP CA chain
-      BASE64_ENCODED_TRUSTSTORE_CONTENT
+  create: false
+  name: federator-client-connection-config
   items:
-    - key: common-configuration.properties
-      path: common-configuration.properties
-    - key: keystore.p12
-      path: keystore.p12
-    - key: truststore.p12
-      path: truststore.p12
+    - key: connection-configuration.json
+      path: connection-configuration.json
+
+configRender:
+  enabled: true
+  secretRefs:
+    - name: keycloak-management-node-client
+      items:
+        - key: client-secret
+          path: idp.client.secret
+    - name: oauth2-proxy-redis
+      items:
+        - key: redis-password
+          path: redis.password
+    - name: kafka-ia-node-user
+      items:
+        - key: sasl.jaas.config
+          path: kafka.jaas.config
+  properties:
+    - secretKey: idp.client.secret
+      file: common-configuration.properties
+      property: idp.client.secret
+    - secretKey: redis.password
+      file: client.properties
+      property: redis.password
+    - secretKey: kafka.jaas.config
+      file: client.properties
+      property: kafka.additional.sasl.jaas.config
 
 javaOpts: "-Dlogback.configurationFile=/config/logback.xml"
 args: ""
 
 extraEnv:
-  - name: REDIS_USERNAME
-    valueFrom:
-      secretKeyRef:
-        name: redis-auth
-        key: redis-username
-  - name: REDIS_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: redis-auth
-        key: redis-password
-  - name: AWS_REGION
-    value: eu-west-2
   - name: LOG_LEVEL
     value: INFO
 
@@ -142,7 +137,7 @@ extraEnv:
 # Enable this when connecting to AWS MSK with IAM authentication
 # The init container will download the required authentication library
 mskIamAuth:
-  enabled: true
+  enabled: false
   image:
     # For air-gapped or private registry deployments, override the repository
     # repository: your-registry.example.com/docker-hub/curlimages/curl
@@ -180,3 +175,15 @@ resources:
   limits:
     cpu: 500m
     memory: 1Gi
+
+# The federator client always builds an HttpClient with a JKS truststore.
+# This example reuses the existing `federator-client-certs` secret.
+extraVolumeMounts:
+  - name: certs
+    mountPath: /certs
+    readOnly: true
+
+extraVolumes:
+  - name: certs
+    secret:
+      secretName: federator-client-certs

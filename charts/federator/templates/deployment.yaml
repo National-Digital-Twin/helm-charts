@@ -15,9 +15,23 @@ spec:
     metadata:
       labels:
 {{ include "federator.selectorLabels" . | indent 8 }}
-      {{- with .Values.podAnnotations }}
+      {{- $podAnnotations := .Values.podAnnotations | default (dict) }}
+      {{- $configFiles := .Values.config.files | default (dict) }}
+      {{- $hasConfigMap := gt (len $configFiles) 0 }}
+      {{- $secretCfg := .Values.secretConfig | default (dict) }}
+      {{- $secretFiles := $secretCfg.files | default (dict) }}
+      {{- $hasSecret := or ($secretCfg.create | default false) (gt (len $secretFiles) 0) }}
+      {{- if or (gt (len $podAnnotations) 0) $hasConfigMap $hasSecret }}
       annotations:
+        {{- if $hasConfigMap }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if $hasSecret }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with $podAnnotations }}
 {{ toYaml . | indent 8 }}
+        {{- end }}
       {{- end }}
     spec:
       serviceAccountName: {{ include "federator.serviceAccountName" . }}
@@ -29,8 +43,93 @@ spec:
       securityContext:
 {{ toYaml . | indent 8 }}
       {{- end }}
-      {{- if .Values.mskIamAuth.enabled }}
+      {{- $renderEnabled := .Values.configRender.enabled | default false }}
+      {{- $renderSecretRefs := .Values.configRender.secretRefs | default (list) }}
+      {{- $hasRenderSecretRefs := gt (len $renderSecretRefs) 0 }}
+      {{- if or .Values.mskIamAuth.enabled $renderEnabled }}
       initContainers:
+      {{- if $renderEnabled }}
+        {{- $configFiles := .Values.config.files | default (dict) }}
+        {{- if not (gt (len $configFiles) 0) }}
+          {{- fail "configRender.enabled=true requires config.files to be non-empty" }}
+        {{- end }}
+        - name: render-config
+          image: {{ .Values.configRender.image.repository }}:{{ .Values.configRender.image.tag }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -eu
+
+              CONFIG_DST={{ .Values.config.mountPath | quote }}
+              CONFIG_SRC=/config-src
+              SECRETS_DIR=/secrets
+
+              mkdir -p "$CONFIG_DST"
+              cp -a "$CONFIG_SRC/." "$CONFIG_DST/"
+
+              upsert_prop() {
+                prop="$1"
+                val_file="$2"
+                target_file="$3"
+
+                if [ ! -f "$val_file" ]; then
+                  echo "missing secret key file: $val_file" >&2
+                  exit 1
+                fi
+
+                val="$(cat "$val_file")"
+                mkdir -p "$(dirname "$target_file")"
+                touch "$target_file"
+                esc="$(printf '%s' "$val" | sed -e 's/[\\/&|]/\\\\&/g')"
+
+                if grep -q "^${prop}=" "$target_file"; then
+                  sed -i "s|^${prop}=.*|${prop}=${esc}|" "$target_file"
+                else
+                  printf '%s\n' "${prop}=${val}" >> "$target_file"
+                fi
+              }
+
+              replace_all() {
+                placeholder="$1"
+                val_file="$2"
+                target_file="$3"
+
+                if [ ! -f "$val_file" ]; then
+                  echo "missing secret key file: $val_file" >&2
+                  exit 1
+                fi
+
+                val="$(cat "$val_file")"
+                mkdir -p "$(dirname "$target_file")"
+                touch "$target_file"
+                esc="$(printf '%s' "$val" | sed -e 's/[\\/&|]/\\\\&/g')"
+                sed -i "s|${placeholder}|${esc}|g" "$target_file"
+              }
+
+              {{- if not (or $hasRenderSecretRefs (ne (.Values.configRender.secretName | default "") "")) }}
+                {{- fail "configRender.enabled=true requires either configRender.secretRefs or configRender.secretName" }}
+              {{- end }}
+              {{- range $m := (.Values.configRender.properties | default (list)) }}
+              upsert_prop {{ required "configRender.properties[].property is required" $m.property | quote }} \
+                "$SECRETS_DIR/{{ required "configRender.properties[].secretKey is required" $m.secretKey }}" \
+                "$CONFIG_DST/{{ required "configRender.properties[].file is required" $m.file }}"
+              {{- end }}
+              {{- range $r := (.Values.configRender.replacements | default (list)) }}
+              replace_all {{ required "configRender.replacements[].placeholder is required" $r.placeholder | quote }} \
+                "$SECRETS_DIR/{{ required "configRender.replacements[].secretKey is required" $r.secretKey }}" \
+                "$CONFIG_DST/{{ required "configRender.replacements[].file is required" $r.file }}"
+              {{- end }}
+          volumeMounts:
+            - name: federator-config-dir
+              mountPath: {{ .Values.config.mountPath }}
+            - name: federator-config
+              mountPath: /config-src
+              readOnly: true
+            - name: federator-render-secrets
+              mountPath: /secrets
+              readOnly: true
+      {{- end }}
+      {{- if .Values.mskIamAuth.enabled }}
         - name: fetch-msk-iam-auth
           image: {{ .Values.mskIamAuth.image.repository }}:{{ .Values.mskIamAuth.image.tag }}
           args:
@@ -41,6 +140,7 @@ spec:
           volumeMounts:
             - name: {{ .Values.mskIamAuth.volumeName }}
               mountPath: {{ .Values.mskIamAuth.libraryPath }}
+      {{- end }}
       {{- end }}
       containers:
         - name: federator
@@ -91,20 +191,32 @@ spec:
           securityContext:
 {{ toYaml . | indent 12 }}
           {{- end }}
-          {{- $hasConfig := gt (len .Values.config.files) 0 }}
+          {{- $renderEnabled := .Values.configRender.enabled | default false }}
+          {{- $configFiles := .Values.config.files | default (dict) }}
+          {{- $hasConfig := gt (len $configFiles) 0 }}
           {{- $secretName := include "federator.configSecretName" . }}
           {{- $secretItems := .Values.secretConfig.items | default (list) }}
           {{- $hasSecretMounts := and $secretName (gt (len $secretItems) 0) }}
           {{- $hasExtraMounts := gt (len .Values.extraVolumeMounts) 0 }}
           {{- $hasMskIamAuth := .Values.mskIamAuth.enabled }}
-          {{- if or $hasConfig $hasSecretMounts $hasExtraMounts $hasMskIamAuth }}
+          {{- if or $renderEnabled $hasConfig $hasSecretMounts $hasExtraMounts $hasMskIamAuth }}
           volumeMounts:
-          {{- if $hasConfig }}
-            - name: federator-config
+          {{- if $renderEnabled }}
+            - name: federator-config-dir
               mountPath: {{ .Values.config.mountPath }}
+          {{- else if or $hasConfig $hasSecretMounts }}
+            - name: federator-config-dir
+              mountPath: {{ .Values.config.mountPath }}
+          {{- end }}
+          {{- if and $hasConfig (not $renderEnabled) }}
+          {{- range $filename, $_ := $configFiles }}
+            - name: federator-config
+              mountPath: {{ printf "%s/%s" $.Values.config.mountPath $filename }}
+              subPath: {{ $filename }}
               readOnly: true
           {{- end }}
-          {{- if $hasSecretMounts }}
+          {{- end }}
+          {{- if and $hasSecretMounts (not $renderEnabled) }}
           {{- range $item := $secretItems }}
             - name: federator-secret
               mountPath: {{ default (printf "%s/%s" $.Values.config.mountPath (default $item.path $item.key)) $item.mountPath }}
@@ -124,14 +236,23 @@ spec:
           resources:
 {{ toYaml . | indent 12 }}
           {{- end }}
+      {{- $renderEnabled := .Values.configRender.enabled | default false }}
+      {{- $renderSecretRefs := .Values.configRender.secretRefs | default (list) }}
+      {{- $hasRenderSecretRefs := gt (len $renderSecretRefs) 0 }}
       {{- $hasExtraVolumes := gt (len .Values.extraVolumes) 0 }}
-      {{- $hasConfigVolume := gt (len .Values.config.files) 0 }}
+      {{- $configFiles := .Values.config.files | default (dict) }}
+      {{- $hasConfigVolume := gt (len $configFiles) 0 }}
       {{- $secretName := include "federator.configSecretName" . }}
       {{- $hasSecretVolume := ne $secretName "" }}
+      {{- $hasRenderSecretVolume := and $renderEnabled (or $hasRenderSecretRefs (ne (.Values.configRender.secretName | default "") "")) }}
       {{- $hasMskIamAuth := .Values.mskIamAuth.enabled }}
-      {{- if or $hasConfigVolume $hasSecretVolume $hasExtraVolumes $hasMskIamAuth }}
+      {{- if or $renderEnabled $hasConfigVolume $hasSecretVolume $hasRenderSecretVolume $hasExtraVolumes $hasMskIamAuth }}
       volumes:
-        {{- if $hasConfigVolume }}
+        {{- if or $renderEnabled $hasConfigVolume $hasSecretVolume }}
+        - name: federator-config-dir
+          emptyDir: {}
+        {{- end }}
+        {{- if or $hasConfigVolume $renderEnabled }}
         - name: federator-config
           configMap:
             name: {{ include "federator.fullname" . }}-config
@@ -149,6 +270,29 @@ spec:
                 {{- end }}
             {{- end }}
             {{- end }}
+        {{- end }}
+        {{- if $hasRenderSecretVolume }}
+        - name: federator-render-secrets
+          {{- if $hasRenderSecretRefs }}
+          projected:
+            sources:
+              {{- range $ref := $renderSecretRefs }}
+              - secret:
+                  name: {{ required "configRender.secretRefs[].name is required" $ref.name | quote }}
+                  {{- with ($ref.items | default (list)) }}
+                  items:
+                    {{- range . }}
+                    - key: {{ required "configRender.secretRefs[].items[].key is required" .key | quote }}
+                      {{- if .path }}
+                      path: {{ .path | quote }}
+                      {{- end }}
+                    {{- end }}
+                  {{- end }}
+              {{- end }}
+          {{- else }}
+          secret:
+            secretName: {{ .Values.configRender.secretName | quote }}
+          {{- end }}
         {{- end }}
         {{- if $hasMskIamAuth }}
         - name: {{ .Values.mskIamAuth.volumeName }}

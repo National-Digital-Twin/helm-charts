@@ -60,6 +60,11 @@ spec:
       mountPath: /opt/scripts
       readOnly: true
     {{- end }}
+    {{- if contains "SSL" .Values.kafka.securityProtocol }}
+    - name: kafka-truststore
+      mountPath: /opt/kafka/truststore
+      readOnly: true
+    {{- end }}
     {{- end }}
   restartPolicy: Always
   {{- if or .Values.kafkaCredentialsSecret.enabled .Values.script.enabled }}
@@ -68,6 +73,17 @@ spec:
   - name: kafka-credentials
     secret:
       secretName: {{ .Values.kafkaCredentialsSecret.name }}
+      items:
+      - key: kafka-config.properties
+        path: kafka-config.properties
+  {{- if contains "SSL" .Values.kafka.securityProtocol }}
+  - name: kafka-truststore
+    secret:
+      secretName: {{ .Values.kafkaCredentialsSecret.name }}
+      items:
+      - key: truststore.jks
+        path: kafka-truststore.jks
+  {{- end }}
   {{- end }}
   {{- if .Values.script.enabled }}
   - name: scripts
