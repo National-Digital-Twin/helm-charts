@@ -43,3 +43,4 @@ overrides.yaml
 *.env
 
 mongooverrides.yaml
+*.Zone.Identifier
