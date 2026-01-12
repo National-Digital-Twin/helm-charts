@@ -10,7 +10,7 @@
 set -e
 
 VERSION=${1:-1.0.0}
-ECR_REGISTRY="485034933006.dkr.ecr.eu-west-2.amazonaws.com"
+ECR_REGISTRY="Idhere.dkr.ecr.eu-west-2.amazonaws.com"
 ECR_REPO="curl-kafka-tools"
 IMAGE_NAME="test-message-pod"
 FULL_IMAGE="${ECR_REGISTRY}/${ECR_REPO}:${VERSION}"
