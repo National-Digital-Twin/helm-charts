@@ -1,6 +1,6 @@
 # management-node Helm Chart
 
-This chart deploys the management-node service as a Kubernetes Deployment exposed through a ClusterIP Service. It packages the container image published to GHCR and provides the common knobs for replicas, service account management, and runtime configuration.
+This chart deploys the management-node service as a Kubernetes Deployment exposed through a ClusterIP Service. It packages the container image published to GHCR and provides the common settings for replicas, service account management, and runtime configuration.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ To override the image reference or tag:
 ```bash
 helm install management-node ./charts/management-node \
   --set image.repository=ghcr.io/national-digital-twin/management-node \
-  --set image.tag=0.90.0
+  --set image.tag=1.0.1
 ```
 
 Upgrade in place:
@@ -42,7 +42,7 @@ helm uninstall management-node
 | --- | --- | --- |
 | `replicaCount` | `1` | Number of pods in the deployment. |
 | `image.repository` | `ghcr.io/national-digital-twin/management-node` | Container image repository. |
-| `image.tag` | `0.90.0` | Container image tag. |
+| `image.tag` | `1.0.1` | Container image tag. |
 | `image.pullPolicy` | `IfNotPresent` | Image pull policy for the container. |
 | `serviceAccount.create` | `true` | Whether to create a dedicated ServiceAccount. |
 | `serviceAccount.name` | `""` | Override ServiceAccount name when `create` is false. |

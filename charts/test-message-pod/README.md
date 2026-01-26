@@ -75,8 +75,8 @@ kubectl exec -n org-a test-msg-test-message-pod -- /opt/scripts/send-kafka-messa
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `image.repository` | Image repository | `485034933006.dkr.ecr.eu-west-2.amazonaws.com/curl-kafka-tools` |
-| `image.tag` | Image tag | `1.0.3` |
+| `image.repository` | Image repository | `Idhere.dkr.ecr.eu-west-2.amazonaws.com/curl-kafka-tools` |
+| `image.tag` | Image tag | `latest` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `kafka.bootstrapServer` | Kafka bootstrap server | `kafka-cluster-kafka-bootstrap:9092` |
 | `kafka.topic` | Default Kafka topic | `knowledge` |
