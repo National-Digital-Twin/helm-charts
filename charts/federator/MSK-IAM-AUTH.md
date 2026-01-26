@@ -30,9 +30,7 @@ mskIamAuth:
 ```yaml
 mskIamAuth:
   enabled: true
-  image:
-    repository: curlimages/curl
-    tag: "8.11.1"
+  image: curlimages/curl:8.11.1
   downloadUrl: "https://github.com/aws/aws-msk-iam-auth/releases/download/v2.3.0/aws-msk-iam-auth-2.3.0-all.jar"
   jarFileName: "aws-msk-iam-auth-2.3.0-all.jar"
   libraryPath: "/library"
@@ -46,9 +44,7 @@ If you're deploying in an air-gapped environment or using a private registry:
 ```yaml
 mskIamAuth:
   enabled: true
-  image:
-    repository: your-registry.example.com/docker-hub/curlimages/curl
-    tag: "8.11.1"
+  image: your-registry.example.com/docker-hub/curlimages/curl:8.11.1
 ```
 
 ### AWS Region Configuration

@@ -131,7 +131,7 @@ spec:
       {{- end }}
       {{- if .Values.mskIamAuth.enabled }}
         - name: fetch-msk-iam-auth
-          image: {{ .Values.mskIamAuth.image.repository }}:{{ .Values.mskIamAuth.image.tag }}
+          image: {{ .Values.mskIamAuth.image }}
           args:
             - "-sSL"
             - "{{ .Values.mskIamAuth.downloadUrl }}"

@@ -138,11 +138,9 @@ extraEnv:
 # The init container will download the required authentication library
 mskIamAuth:
   enabled: false
-  image:
-    # For air-gapped or private registry deployments, override the repository
-    # repository: your-registry.example.com/docker-hub/curlimages/curl
-    repository: curlimages/curl
-    tag: "8.11.1"
+  # For air-gapped or private registry deployments, override the image
+  # image: your-registry.example.com/docker-hub/curlimages/curl:8.11.1
+  image: curlimages/curl:8.11.1
   # The library will be downloaded to /library and added to the Java classpath
   # Customize these if needed:
   # downloadUrl: "https://github.com/aws/aws-msk-iam-auth/releases/download/v2.3.0/aws-msk-iam-auth-2.3.0-all.jar"

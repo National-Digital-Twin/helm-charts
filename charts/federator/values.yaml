@@ -101,9 +101,7 @@ extraVolumeMounts: []
 # Required when using AWS MSK with IAM authentication (SASL_SSL with AWS_MSK_IAM mechanism)
 mskIamAuth:
   enabled: false
-  image:
-    repository: curlimages/curl
-    tag: "8.11.1"
+  image: curlimages/curl:8.11.1
   # URL to download the AWS MSK IAM auth JAR file
   downloadUrl: "https://github.com/aws/aws-msk-iam-auth/releases/download/v2.3.0/aws-msk-iam-auth-2.3.0-all.jar"
   jarFileName: "aws-msk-iam-auth-2.3.0-all.jar"
