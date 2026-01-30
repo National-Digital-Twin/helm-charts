@@ -1,0 +1,6 @@
+apiVersion: v2
+name: federator
+description: Helm chart for deploying the NDTP Federator in producer (server) or consumer (client) mode.
+type: application
+version: 0.1.1
+appVersion: "1.0.0"

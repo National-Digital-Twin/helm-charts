@@ -10,6 +10,9 @@ istio:
   componentSelectorLabels: 
     istio: ingressgateway
   namespace: istio-system
+  authorizationPolicy:
+    hosts:
+      - "*"
   virtualService:
     enabled: true
     hosts:

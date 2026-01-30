@@ -1,0 +1,13 @@
+{{- if .Values.config.files }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "federator.fullname" . }}-config
+  labels:
+{{ include "federator.labels" . | indent 4 }}
+data:
+{{- range $filename, $content := .Values.config.files }}
+  {{ $filename }}: |-
+{{ $content | nindent 4 }}
+{{- end }}
+{{- end }}

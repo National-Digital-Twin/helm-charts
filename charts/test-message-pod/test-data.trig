@@ -1,0 +1,17 @@
+PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX veh:     <http://example.com/vehicle#>
+PREFIX authz:   <http://ndtp.co.uk/security#>
+PREFIX :        <http://example.com/data#>
+
+:carGolf rdf:type veh:Car ;
+    veh:make "Volkswagen" ;
+    veh:model "Golf GTI" .
+
+GRAPH authz:labels {
+    [ authz:pattern "<http://example.com/data#carGolf> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.com/vehicle#Car>" ;
+      authz:label "*" ] .
+    [ authz:pattern "<http://example.com/data#carGolf> <http://example.com/vehicle#make> \"Volkswagen\"" ;
+      authz:label "*" ] .
+    [ authz:pattern "<http://example.com/data#carGolf> <http://example.com/vehicle#model> \"Golf GTI\"" ;
+      authz:label "*" ] .
+}

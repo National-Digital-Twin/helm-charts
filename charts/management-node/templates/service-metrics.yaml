@@ -1,0 +1,25 @@
+{{- if .Values.metricsService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "management-node.fullname" . }}-metrics
+  labels:
+    helm.sh/chart: {{ include "management-node.chart" . }}
+    app.kubernetes.io/name: {{ include "management-node.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: Helm
+  {{- with .Values.metricsService.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.metricsService.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "management-node.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: management
+      port: {{ .Values.metricsService.port }}
+      targetPort: management
+{{- end }}

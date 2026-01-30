@@ -335,7 +335,7 @@ imagePullSecrets:
 | istio.enabled                 | enabled by default, but used to disable Istio components                 | true                                                  |
 | istio.extraDefaults           | deploys peer authentication and auth deny rules when different namespace | true                                                  |
 | istio.principal               | used for auth policy and defaults to gateway ingress                     | cluster.local/ns/istio-system/sa/istio-ingressgateway |
-| istio.peerAuthenticationMode  | can be set to PERMISSIVE for debugging but not recommended long term     | STRICT                                                |
+| istio.peerAuthenticationMode  | can be set to PERMISSIVE for debugging but not recommended long term     | PERMISSIVE                                            |
 | istio.virtualService.hosts    | hosts default, should be replaced with your domain                       | [ * ]                                                 |
 | istio.virtualService.gateways | gateway reference                                                        | [ istio-system/istio-gateway  ]                       |
 | istio.groupClaimNames.admin   | default admin group claim name                                           | "ianode_admin"                                        |
@@ -362,10 +362,15 @@ imagePullSecrets:
 | -------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------- |
 | fusekiConfig.create                    | create config map with default config.tll             | true                                                                      |
 | fusekiConfig.name                      | config map name, changes require volume mount updates | "graph-server-fuseki"                                                     |
-| fusekiConfig.catalogEnabled            | enabled config.tll including catalog topic            | false                                                                      |
 | fusekiConfig.prefix                    | override prefix for default config.tll                | "ndtp.co.uk"                                                              |
+| fusekiConfig.catalogEnabled            | enabled config.tll including catalog topic            | false                                                                     |
+| fusekiConfig.cqrsEnabled               | enables CQRS (Command Query Responsibility Segregation) | true                                                                      |
 | fusekiConfig.jaContext.graphqlExecutor | override graphqlExecutor for default config.tll       | "uk.gov.dbt.ndtp.jena.graphql.execution.ianode.graph.IANodeGraphExecutor" |
 | fusekiConfig.jaContext.queryTimeout    | override queryTimeout  for default config.tll         | "120000,120000"                                                           |
+| fusekiConfig.kafkaTopics.knowledge     | Kafka topic for knowledge data                        | "knowledge"                                                               |
+| fusekiConfig.kafkaTopics.ontology      | Kafka topic for ontology data                         | "ontology"                                                                |
+| fusekiConfig.cqrsTopics.knowledge      | CQRS topic for knowledge data                         | "knowledge"                                                               |
+| fusekiConfig.cqrsTopics.ontology       | CQRS topic for ontology data                          | "ontology"                                                                |
 
 ###  MongoDB 
 
@@ -398,7 +403,7 @@ imagePullSecrets:
 | ------------------------------------ | -------------------------------------------------------- | ------------------------------------------- |
 | apps.api.enabled                     | toggled the component to be deployed or not              | true                                        |
 | apps.api.deployment.image.repository | default image repository                                 | ghcr.io/national-digital-twin/ianode-access |
-| apps.api.deployment.image.tag        | default image tag                                        | 1.2.1                                       |
+| apps.api.deployment.image.tag        | default image tag                                        | 0.90.0                                      |
 | apps.api.configMap.data              | config map overrides, only the ones listed are mandatory | DEPLOYED_DOMAIN, OPENID_PROVIDER_URL        |
 
 ###  Access UI

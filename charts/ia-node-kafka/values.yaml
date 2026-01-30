@@ -30,9 +30,36 @@ kafkaCluster:
     authentication:
       type: scram-sha-512
   spec:
-    version: 3.9.0
-    kafkaReplicas: 3
-    zookeeperReplicas: 3
+    version: 4.1.0
+    kafkaReplicas: 1
+    zookeeperReplicas: 0
+    # KRaft mode configuration for Kafka 4.x
+    kraft:
+      enabled: true
+      controllerReplicas: 1
+      brokerReplicas: 1
+    # Replication factors for single broker setup
+    config:
+      default.replication.factor: 1
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+    # Resource limits for small environments
+    resources:
+      broker:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+      controller:
+        requests:
+          cpu: 50m
+          memory: 256Mi
+        limits:
+          cpu: 200m
+          memory: 512Mi
 
   secret:
     create: true
@@ -41,3 +68,6 @@ kafkaCluster:
     password: supersecretpassword
     usernameConnect: kafka-connect-ia-node-user
     passwordConnect: supersecretpasswordforconnect
+    # Security protocol for kafka-config.properties (SASL_PLAINTEXT or SASL_SSL)
+    # Use SASL_PLAINTEXT for local/dev (port 9092), SASL_SSL for production (port 9093)
+    securityProtocol: SASL_PLAINTEXT

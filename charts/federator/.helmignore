@@ -1,0 +1,7 @@
+.DS_Store
+.git/
+.hg/
+.svn/
+*.swp
+.idea/
+.vscode/
