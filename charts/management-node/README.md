@@ -67,6 +67,13 @@ helm uninstall management-node
 | `app.datasource.secret.username` | `null` | Username embedded in a generated Secret (required when `create` is true). |
 | `app.datasource.secret.password` | `null` | Password embedded in a generated Secret (required when `create` is true). |
 | `app.datasource.secret.annotations` | `{}` | Extra annotations applied to the generated Secret. |
+| `app.oauth2.resourceserver.jwt.issuerUri` | `http://keycloak.keycloak.svc.cluster.local/realms/management-node` | OAuth2 JWT issuer URI. |
+| `app.oauth2.resourceserver.jwt.jwkSetUri` | `http://keycloak.keycloak.svc.cluster.local/realms/management-node/protocol/openid-connect/certs` | OAuth2 JWK Set URI. |
+| `app.oauth2.resourceserver.jwt.jwsAlgorithm` | `RS256` | JWS algorithm for JWT validation. |
+| `app.oauth2.resourceserver.opaquetoken.introspectionUri` | `http://keycloak.keycloak.svc.cluster.local/realms/management-node/protocol/openid-connect/token/introspect` | OAuth2 opaque token introspection URI. |
+| `app.oauth2.resourceserver.opaquetoken.clientSecret` | `""` | OAuth2 client secret (direct value). Use this or `existingSecret`. |
+| `app.oauth2.resourceserver.opaquetoken.existingSecret.name` | `""` | Name of existing Kubernetes Secret containing the client secret. Takes precedence over `clientSecret`. |
+| `app.oauth2.resourceserver.opaquetoken.existingSecret.key` | `""` | Key within the existing Secret that contains the client secret value. |
 | `app.extraEnv` | `[]` | Additional environment variables appended to the pod. |
 | `ingress.enabled` | `false` | Toggle creation of a Kubernetes Ingress resource. |
 | `ingress.className` | `""` | Optional `ingressClassName` to target a specific ingress controller. |
