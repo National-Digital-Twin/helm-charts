@@ -118,9 +118,15 @@ spec:
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_OPAQUETOKEN_INTROSPECTION_URI
               value: "{{ . }}"
             {{- end }}
-            {{- with $opaquetoken.clientSecret }}
+            {{- if $opaquetoken.existingSecret.name }}
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_OPAQUETOKEN_CLIENT_SECRET
-              value: "{{ . }}"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $opaquetoken.existingSecret.name }}
+                  key: {{ $opaquetoken.existingSecret.key }}
+            {{- else if $opaquetoken.clientSecret }}
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_OPAQUETOKEN_CLIENT_SECRET
+              value: "{{ $opaquetoken.clientSecret }}"
             {{- end }}
             {{- with $jwt.jwsAlgorithm }}
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWS_ALGORITHM
