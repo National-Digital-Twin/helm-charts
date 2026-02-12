@@ -1,0 +1,15 @@
+{{- if and .Values.serviceMesh.istio.enabled .Values.serviceMesh.istio.destinationRule.enabled }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ .Values.serviceMesh.istio.destinationRule.name | default "federator-server-dr" }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "federator-suite.labels" . | nindent 4 }}
+spec:
+  host: {{ include "federator-suite.server.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+{{- end }}

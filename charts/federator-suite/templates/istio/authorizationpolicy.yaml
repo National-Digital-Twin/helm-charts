@@ -1,0 +1,58 @@
+{{- if and .Values.serviceMesh.istio.enabled .Values.serviceMesh.istio.authorizationPolicy.enabled }}
+{{- if .Values.serviceMesh.istio.authorizationPolicy.denyByDefault }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-by-default
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "federator-suite.labels" . | nindent 4 }}
+spec: {}
+{{- end }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-federation-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "federator-suite.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: federator-server
+  action: ALLOW
+  rules:
+    - from:
+      - source:
+          principals:
+          {{- range .Values.serviceMesh.istio.authorizationPolicy.allowedServiceAccounts }}
+          - {{ . }}
+          {{- end }}
+      to:
+      - operation:
+          methods:
+          - "*"
+{{- if .Values.serviceMesh.istio.authorizationPolicy.allowedNamespaces }}
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: federator-server-allow-cross-namespace
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "federator-suite.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: federator-server
+  rules:
+    - from:
+      - source:
+          namespaces:
+          {{- range .Values.serviceMesh.istio.authorizationPolicy.allowedNamespaces }}
+          - {{ . }}
+          {{- end }}
+{{- end }}
+{{- end }}

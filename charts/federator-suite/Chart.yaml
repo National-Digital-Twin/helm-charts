@@ -1,0 +1,21 @@
+apiVersion: v2
+name: federator-suite
+description: Helm chart for Federator application suite (client, server, kafka, valkey, UIs)
+type: application
+version: 0.1.0
+appVersion: "0.4.1"
+home: https://github.com/national-digital-twin/helm-charts
+maintainers:
+  - name: National Digital Twin Programme
+    email: contact@ndtp.gov.uk
+
+dependencies:
+  - name: kafka
+    version: "~31.0.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: kafka.enabled
+  - name: valkey
+    version: "0.1.0"
+    repository: "file://charts/valkey"
+    condition: valkey.enabled
+

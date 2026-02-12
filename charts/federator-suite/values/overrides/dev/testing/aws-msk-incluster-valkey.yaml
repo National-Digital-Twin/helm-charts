@@ -1,0 +1,10 @@
+# AWS EKS scenario: MSK + in-cluster Valkey
+kafka:
+  external: true
+  externalConfig:
+    securityProtocol: "SASL_SSL"
+    saslMechanism: "AWS_MSK_IAM"
+
+valkey:
+  external: false
+  enabled: true

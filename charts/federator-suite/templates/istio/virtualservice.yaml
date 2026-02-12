@@ -1,0 +1,31 @@
+{{- if and .Values.serviceMesh.istio.enabled .Values.serviceMesh.istio.virtualService.enabled }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.serviceMesh.istio.virtualService.name | default "federator-vs" }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "federator-suite.labels" . | nindent 4 }}
+spec:
+  hosts:
+  {{- range .Values.serviceMesh.istio.virtualService.hosts }}
+    - {{ . | quote }}
+  {{- end }}
+  gateways:
+  {{- range .Values.serviceMesh.istio.virtualService.gatewayRefs }}
+    - {{ . }}
+  {{- end }}
+  tls:
+    - match:
+      - port: 443
+        sniHosts:
+        {{- range .Values.serviceMesh.istio.virtualService.hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      route:
+        - destination:
+            host: {{ include "federator-suite.server.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.federatorServer.service.port | default 8080 }}
+{{- end }}

@@ -1,0 +1,131 @@
+{{- if .Values.federatorServer.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: federator-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{ include "federator-suite.server.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.federatorServer.replicaCount }}
+  {{- with .Values.federatorServer.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.federatorServer.revisionHistoryLimit | default 3 }}
+  selector:
+    matchLabels:
+      app: federator-server
+      {{ include "federator-suite.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmaps/server-properties.yaml") . | sha256sum }}
+        checksum/secrets: {{ include (print $.Template.BasePath "/secrets/federation-cert.yaml") . | sha256sum }}
+        {{- include "federator-suite.istio.inject" . | nindent 8 }}
+        {{- if .Values.serviceMesh.istio.enabled }}
+        traffic.sidecar.istio.io/excludeOutboundPorts: "6379"
+        {{- end }}
+        {{- with .Values.federatorServer.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        app: federator-server
+        {{ include "federator-suite.server.labels" . | nindent 8 }}
+        {{- if eq .Values.global.clusterType "aks" }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "federator-suite.server.serviceAccountName" . }}
+      {{- with .Values.federatorServer.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.federatorServer.podSecurityContext | nindent 8 }}
+      containers:
+      - name: federator-server
+        image: "{{ .Values.federatorServer.image.repository }}:{{ .Values.federatorServer.image.tag }}"
+        imagePullPolicy: {{ .Values.federatorServer.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.federatorServer.config.serverPort }}
+          protocol: TCP
+        - name: jobs-dashboard
+          containerPort: {{ .Values.federatorServer.config.jobsDashboardPort }}
+          protocol: TCP
+        env:
+        - name: IDP_TRUSTSTORE_PATH
+          value: /secrets/federation-cert/keycloak.truststore.jks
+        - name: IDP_KEYSTORE_PATH
+          value: /secrets/federation-cert/ndtp-keystore.jks
+        - name: SERVER_P12_FILE_PATH
+          value: /secrets/federation-server-p12/dev-ndtp.p12
+        - name: SERVER_TRUSTSTORE_FILE_PATH
+          value: /secrets/federation-cert/keycloak.truststore.jks
+        envFrom:
+        - configMapRef:
+            name: federator-server-config
+        # TCP socket probes - verifies gRPC port is listening
+        # See documentation/HEALTHCHECK-ANALYSIS.md for details
+        livenessProbe:
+          tcpSocket:
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          {{- toYaml .Values.federatorServer.resources | nindent 10 }}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /config
+        - name: common-configuration-volume
+          mountPath: /common-configuration
+        - name: federation-cert
+          mountPath: /secrets/federation-cert
+          readOnly: true
+        - name: federation-server-p12
+          mountPath: /secrets/federation-server-p12
+          readOnly: true
+        - name: kafka-auth-volume
+          mountPath: /app/config/kafka-auth/
+        securityContext:
+          {{- toYaml .Values.federatorServer.securityContext | nindent 10 }}
+      volumes:
+      - name: config-volume
+        configMap:
+          name: federator-server-properties
+      - name: kafka-auth-volume
+        secret:
+          secretName: kafka-auth-config
+      - name: common-configuration-volume
+        configMap:
+          name: common-configuration
+      - name: federation-cert
+        secret:
+          secretName: {{ .Values.secrets.certificates.external.existingSecrets.federationCert | default "federation-cert" }}
+      - name: federation-server-p12
+        secret:
+          secretName: {{ .Values.secrets.certificates.external.existingSecrets.serverP12 | default "federation-server-p12" }}
+      {{- with .Values.federatorServer.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.federatorServer.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.federatorServer.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

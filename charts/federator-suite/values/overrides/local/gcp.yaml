@@ -1,0 +1,152 @@
+# Local GCP Organization Override
+# This file is for testing GCP-specific configurations locally
+# It simulates GCP settings but runs against local in-cluster services
+
+global:
+  environment: local
+  clusterType: local  # Running locally, not on GKE
+  orgName: gcp
+  orgPrefix: gcp
+  namespace: ia-federation-gcp  # Separate namespace for GCP org testing
+  
+  managementNode:
+    baseUrl: "http://ia-management-node.ia-management.svc.cluster.local:8080"
+    cacheTtlSeconds: 60
+    requestTimeout: 60
+  
+  imagePullPolicy: IfNotPresent
+
+# Kafka - Use in-cluster Kafka (simulating GCP Managed Kafka locally)
+kafka:
+  external: false  # In-cluster for local testing
+  
+  inClusterConfig:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    persistence:
+      enabled: true
+      size: 5Gi
+    auth:
+      securityProtocol: "SASL_PLAINTEXT"  # Simpler for local
+      saslMechanism: "SCRAM-SHA-512"
+
+# Valkey - Use in-cluster Valkey (simulating GCP Memorystore locally)
+valkey:
+  external: false  # In-cluster for local testing
+  
+  inClusterConfig:
+    architecture: standalone
+    auth:
+      enabled: true
+      password: "gcp-valkey-password"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 250m
+        memory: 512Mi
+    persistence:
+      enabled: true
+      size: 2Gi
+    service:
+      port: 6379
+
+# Kafka UI - Enable with NodePort for local access
+kafkaUi:
+  enabled: true
+  service:
+    type: NodePort  # NodePort for local access
+    port: 8080
+    nodePort: 30082  # Different port than BCC (30080) and ENV (30081)
+
+# Valkey UI - Enable with NodePort for local access
+valkeyUi:
+  enabled: true
+  service:
+    type: NodePort
+    port: 8081
+    nodePort: 30092  # Different port than BCC (30090) and ENV (30091)
+
+# Federator Server
+federatorServer:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: federator-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  
+  service:
+    type: NodePort
+    port: 8080
+    nodePort: 30102  # Unique for GCP org
+  
+  serviceAccount:
+    create: true
+    # No GKE Workload Identity annotations for local testing
+  
+  config:
+    storage:
+      provider: "LOCAL"  # Local filesystem for testing
+    redisPrefix: "federator-server-gcp"
+
+# Federator Client
+federatorClient:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: federator-client
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  
+  service:
+    type: NodePort
+    port: 8080
+    nodePort: 30112  # Unique for GCP org
+  
+  serviceAccount:
+    create: true
+  
+  config:
+    consumerGroup: "ndtp.dbt.gov.uk.gcp"
+    redisPrefix: "federator-client-gcp"
+
+# Service Mesh - Disabled for local
+serviceMesh:
+  istio:
+    enabled: false
+
+# Network Policy - Disabled for local
+networkPolicy:
+  enabled: false
+
+# Secrets - Load from local/secrets/gcp-secrets.yaml
+secrets:
+  create: true
+  certificates:
+    source: external

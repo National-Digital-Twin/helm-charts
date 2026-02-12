@@ -1,0 +1,13 @@
+{{- if and .Values.serviceMesh.istio.enabled .Values.serviceMesh.istio.peerAuthentication.enabled }}
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: peerauthentication-strict
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "federator-suite.labels" . | nindent 4 }}
+spec:
+  mtls:
+    mode: {{ .Values.serviceMesh.istio.peerAuthentication.mode | default "STRICT" | upper }}
+{{- end }}

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: valkey
+description: Valkey subchart for Federator Suite
+type: application
+version: 0.1.0
+appVersion: "9.0.1"
+
+dependencies:
+  - name: valkey
+    version: "2.2.0"
+    repository: https://charts.bitnami.com/bitnami
+    condition: enabled

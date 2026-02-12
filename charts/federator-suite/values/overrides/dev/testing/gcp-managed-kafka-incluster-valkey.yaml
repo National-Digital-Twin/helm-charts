@@ -1,0 +1,10 @@
+# GCP GKE scenario: Managed Kafka + in-cluster Valkey
+kafka:
+  external: true
+  externalConfig:
+    securityProtocol: "SASL_SSL"
+    saslMechanism: "OAUTHBEARER"
+
+valkey:
+  external: false
+  enabled: true

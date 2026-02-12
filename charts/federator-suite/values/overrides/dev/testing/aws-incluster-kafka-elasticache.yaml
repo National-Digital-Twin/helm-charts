@@ -1,0 +1,9 @@
+# AWS EKS scenario: in-cluster Kafka + external Redis/Elasticache
+kafka:
+  external: false
+  inClusterConfig:
+    enabled: true
+
+valkey:
+  external: true
+  enabled: false
