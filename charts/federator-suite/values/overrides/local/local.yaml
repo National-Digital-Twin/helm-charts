@@ -8,6 +8,7 @@ global:
 # Use in-cluster Strimzi Kafka for local
 kafka:
   external: false
+  enabled: true  # Enable in-cluster Bitnami Kafka
   # Override: Enable persistence for local Kind cluster
   persistence:
     enabled: true
@@ -16,7 +17,7 @@ kafka:
 # Use in-cluster Valkey for local
 valkey:
   external: false
-  enabled: true
+  enabled: true  # Enable in-cluster Bitnami Valkey
   inClusterConfig:
     auth:
       enabled: false

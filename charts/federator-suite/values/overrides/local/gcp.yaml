@@ -19,6 +19,7 @@ global:
 # Kafka - Use in-cluster Kafka (simulating GCP Managed Kafka locally)
 kafka:
   external: false  # In-cluster for local testing
+  enabled: true    # Enable in-cluster Bitnami Kafka
   
   inClusterConfig:
     replicaCount: 1
@@ -39,6 +40,7 @@ kafka:
 # Valkey - Use in-cluster Valkey (simulating GCP Memorystore locally)
 valkey:
   external: false  # In-cluster for local testing
+  enabled: true    # Enable in-cluster Bitnami Valkey
   
   inClusterConfig:
     architecture: standalone

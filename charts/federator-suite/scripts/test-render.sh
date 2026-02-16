@@ -18,17 +18,10 @@ SCENARIOS=(
   "local-env:values/overrides/local/secrets.yaml,values/overrides/local/env.yaml"
   "local-heg:values/overrides/local/secrets.yaml,values/overrides/local/heg.yaml"
   "local-gcp:values/overrides/local/secrets.yaml,values/overrides/local/gcp.yaml"
-  "dev-bcc-msk-elasticache:values/overrides/dev/bcc.yaml"
-  "dev-bcc-msk-incluster-valkey:values/overrides/dev/bcc.yaml,values/overrides/dev/testing/aws-msk-incluster-valkey.yaml"
-  "dev-bcc-incluster-kafka-elasticache:values/overrides/dev/bcc.yaml,values/overrides/dev/testing/aws-incluster-kafka-elasticache.yaml"
-  "dev-bcc-incluster-kafka-incluster-valkey:values/overrides/dev/bcc.yaml,values/overrides/dev/testing/aws-incluster-kafka-incluster-valkey.yaml"
-  "dev-heg-eventhubs-managed-redis:values/overrides/dev/heg.yaml"
-  "dev-heg-incluster-kafka-managed-redis:values/overrides/dev/heg.yaml,values/overrides/dev/testing/aks-incluster-kafka-managed-redis.yaml"
-  "dev-heg-incluster-kafka-incluster-valkey:values/overrides/dev/heg.yaml,values/overrides/dev/testing/aks-incluster-kafka-incluster-valkey.yaml"
-  "dev-gcp-managed-kafka-memorystore:values/overrides/dev/gcp.yaml"
-  "dev-gcp-managed-kafka-incluster-valkey:values/overrides/dev/gcp.yaml,values/overrides/dev/testing/gcp-managed-kafka-incluster-valkey.yaml"
-  "dev-gcp-incluster-kafka-memorystore:values/overrides/dev/gcp.yaml,values/overrides/dev/testing/gcp-incluster-kafka-memorystore.yaml"
-  "dev-gcp-incluster-kafka-incluster-valkey:values/overrides/dev/gcp.yaml,values/overrides/dev/testing/gcp-incluster-kafka-incluster-valkey.yaml"
+  "dev-bcc:values/overrides/dev/bcc.yaml"
+  "dev-env:values/overrides/dev/env.yaml"
+  "dev-heg:values/overrides/dev/heg.yaml"
+  "dev-gcp:values/overrides/dev/gcp.yaml"
 )
 
 test_scenario() {
@@ -57,7 +50,9 @@ test_scenario() {
     -f values/kafka.yaml \
     -f values/valkey.yaml \
     -f values/federator.yaml \
-    -f values/ui.yaml \
+    -f values/kafka-ui.yaml \
+    -f values/valkey-ui.yaml \
+    -f values/istio.yaml \
     $values_args \
     2>&1) || exit_code=$?
   

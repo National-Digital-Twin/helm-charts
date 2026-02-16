@@ -1,9 +1,0 @@
-# GCP GKE scenario: in-cluster Kafka + Memorystore for Valkey
-kafka:
-  external: false
-  inClusterConfig:
-    enabled: true
-
-valkey:
-  external: true
-  enabled: false

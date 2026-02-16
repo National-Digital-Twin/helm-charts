@@ -14,10 +14,10 @@ data:
       {
         "host": "{{ include "federator-suite.valkey.host" . }}",
         "port": {{ include "federator-suite.valkey.port" . }},
-        "name": "BCC Valkey",
+        "name": "{{ if .Values.valkey.external }}External {{ end }}Valkey",
         {{- if .Values.valkey.external }}
           {{- if .Values.valkey.externalConfig.auth.enabled }}
-        "password": "{{ .Values.valkey.externalConfig.auth.token }}",
+        "password": "{{ .Values.secrets.valkeyAuth.token | default .Values.valkey.externalConfig.auth.token }}",
           {{- end }}
           {{- if .Values.valkey.externalConfig.tls.enabled }}
         "tls": true,

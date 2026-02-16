@@ -162,13 +162,19 @@ helm upgrade {{ .Release.Name }} . -n {{ .Release.Namespace }} \\
   -f values/kafka.yaml \\
   -f values/valkey.yaml \\
   -f values/federator.yaml \\
-  -f values/ui.yaml \\
+  -f values/kafka-ui.yaml \\
+  -f values/valkey-ui.yaml \\
+  -f values/istio.yaml \\
 {{- if eq .Values.global.environment "local" }}
   -f values/overrides/local/{{ .Values.global.orgName }}.yaml \\
+  -f values/overrides/local/secrets.yaml
 {{- else if eq .Values.global.environment "dev" }}
   -f values/overrides/dev/{{ .Values.global.orgName }}.yaml \\
+  -f values/overrides/dev/secrets/{{ .Values.global.orgName }}-secrets.yaml
+{{- else if eq .Values.global.environment "prod" }}
+  -f values/overrides/prod/{{ .Values.global.orgName }}.yaml \\
+  -f values/overrides/prod/secrets/{{ .Values.global.orgName }}-secrets.yaml
 {{- end }}
-  -f values/overrides/{{ .Values.global.environment }}/secrets/{{ .Values.global.orgName }}-secrets.yaml
 
 # Uninstall release
 helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
@@ -183,5 +189,5 @@ helm history {{ .Release.Name }} -n {{ .Release.Namespace }}
 helm rollback {{ .Release.Name }} -n {{ .Release.Namespace }}
 
 ================================================================================
-  For more information, see documentation/README.md or contact support
+  For more information, see README.md in this chart directory
 ================================================================================

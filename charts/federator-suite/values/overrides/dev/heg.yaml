@@ -132,15 +132,13 @@ serviceMesh:
     version: "1.25.0"
     
     gateway:
-      enabled: false  # Managed separately
       selector:
         istio: ingressgateway
     
     virtualService:
-      enabled: true
       hosts:
         - "heg-federator.example.com"
-      gateways:
+      gatewayRefs:
         - istio-system/federator-gateway
 
 # Management Node - Azure Dev

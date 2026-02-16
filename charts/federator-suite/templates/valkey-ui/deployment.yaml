@@ -38,7 +38,7 @@ spec:
         {{- if .Values.valkey.external }}
           {{- if .Values.valkey.externalConfig.auth.enabled }}
         - name: REDIS_PASSWORD
-          value: "{{ .Values.valkey.externalConfig.auth.token }}"
+          value: "{{ .Values.secrets.valkeyAuth.token | default .Values.valkey.externalConfig.auth.token }}"
           {{- end }}
           {{- if .Values.valkey.externalConfig.tls.enabled }}
         - name: REDIS_TLS

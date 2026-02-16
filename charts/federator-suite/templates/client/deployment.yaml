@@ -69,8 +69,8 @@ spec:
             name: federator-client-config
         - secretRef:
             name: federator-client-secret-config
-        # JobRunr Dashboard HTTP endpoint health check
-        # See documentation/HEALTHCHECK-ANALYSIS.md for details
+        # HTTP probes use the JobRunr dashboard endpoint.
+        # This confirms the client container is responsive and ready to serve traffic.
         livenessProbe:
           httpGet:
             path: /

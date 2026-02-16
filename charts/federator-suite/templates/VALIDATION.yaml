@@ -1,6 +1,9 @@
 {{/*
 Validation template - runs before any resources are created
 This ensures configuration is correct before deployment
+
+This hook intentionally creates a lightweight ConfigMap as a marker
+so validation executes during both install and upgrade.
 */}}
 {{- include "federator-suite.validateConfig" . }}
 

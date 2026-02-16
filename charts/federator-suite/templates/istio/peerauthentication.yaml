@@ -1,4 +1,4 @@
-{{- if and .Values.serviceMesh.istio.enabled .Values.serviceMesh.istio.peerAuthentication.enabled }}
+{{- if .Values.serviceMesh.istio.enabled }}
 ---
 apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication

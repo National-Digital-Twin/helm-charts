@@ -1,13 +1,12 @@
-# Istio Configuration (Always Optional - Default: Disabled)
-# Nested under serviceMesh for clarity
+# Istio Configuration (single switch)
+# Set serviceMesh.istio.enabled=true to deploy all Istio resources.
 
 serviceMesh:
   istio:
-    enabled: false  # Set to true to enable Istio resources
+    enabled: false  # Single switch for Istio mode
     
     # Gateway configuration
     gateway:
-      enabled: false  # Enable for ingress
       name: ia-federator-ingress-gateway
       selector:
         app: istio-ingress-passthrough
@@ -16,7 +15,6 @@ serviceMesh:
     
     # VirtualService configuration
     virtualService:
-      enabled: false
       name: federator-vs
       hosts:
         - "ia-federator-{{ .Values.global.orgName }}.local"
@@ -25,17 +23,14 @@ serviceMesh:
     
     # DestinationRule configuration
     destinationRule:
-      enabled: false
       name: federator-server-dr
     
     # PeerAuthentication
     peerAuthentication:
-      enabled: false
       mode: STRICT  # or PERMISSIVE
     
     # AuthorizationPolicy
     authorizationPolicy:
-      enabled: false
       denyByDefault: false
       # Allow traffic from specific service accounts (SPIFFE identity)
       allowedServiceAccounts:

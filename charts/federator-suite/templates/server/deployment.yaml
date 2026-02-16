@@ -67,8 +67,8 @@ spec:
         envFrom:
         - configMapRef:
             name: federator-server-config
-        # TCP socket probes - verifies gRPC port is listening
-        # See documentation/HEALTHCHECK-ANALYSIS.md for details
+        # TCP socket probes verify that the server process is listening on the app port.
+        # This is used because the server exposes gRPC rather than a simple HTTP health endpoint.
         livenessProbe:
           tcpSocket:
             port: http

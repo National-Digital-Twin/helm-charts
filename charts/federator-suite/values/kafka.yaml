@@ -9,7 +9,8 @@ kafka:
   # - external: false → enabled: true  (load and deploy Bitnami chart)
   # - external: true  → enabled: false (skip Bitnami chart, saves time)
   # IMPORTANT: Always set enabled = !external
-  enabled: true  # Must be inverse of external flag above
+  # Default: false (enable explicitly in overrides for in-cluster Kafka)
+  enabled: false
   
   # ============================================
   # In-cluster Bitnami Kafka configuration (used when external: false)

@@ -1,4 +1,4 @@
-{{- if and .Values.serviceMesh.istio.enabled .Values.serviceMesh.istio.authorizationPolicy.enabled }}
+{{- if .Values.serviceMesh.istio.enabled }}
 {{- if .Values.serviceMesh.istio.authorizationPolicy.denyByDefault }}
 ---
 apiVersion: security.istio.io/v1

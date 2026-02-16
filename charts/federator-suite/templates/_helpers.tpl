@@ -201,13 +201,32 @@ Valkey password (from secret or plain value)
 {{- define "federator-suite.valkey.password" -}}
 {{- if .Values.valkey.external }}
 {{- if .Values.valkey.externalConfig.auth.enabled }}
-{{- .Values.valkey.externalConfig.auth.token }}
+{{- .Values.secrets.valkeyAuth.token | default .Values.valkey.externalConfig.auth.token }}
 {{- else }}
 {{- "" }}
 {{- end }}
 {{- else }}
 {{- if .Values.valkey.valkey.auth.enabled }}
 {{- .Values.valkey.valkey.auth.password }}
+{{- else }}
+{{- "" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Get Valkey/Redis username
+*/}}
+{{- define "federator-suite.valkey.username" -}}
+{{- if .Values.valkey.external }}
+{{- if .Values.valkey.externalConfig.auth.enabled }}
+{{- .Values.valkey.externalConfig.auth.username | default "default" }}
+{{- else }}
+{{- "" }}
+{{- end }}
+{{- else }}
+{{- if .Values.valkey.valkey.auth.enabled }}
+{{- .Values.valkey.valkey.auth.username | default "" }}
 {{- else }}
 {{- "" }}
 {{- end }}
@@ -225,11 +244,7 @@ Validate configuration - basic checks
 {{- fail "ERROR: valkey.external is true but valkey.externalConfig.host is not set" }}
 {{- end }}
 {{- /* Certificate validation disabled for templating - secrets should be provided at deployment time */ -}}
-{{- if .Values.istio.enabled }}
-{{- if and (not .Values.istio.gateway.enabled) (not .Values.istio.virtualService.enabled) }}
-{{- fail "ERROR: istio.enabled is true but no Istio resources are enabled (gateway, virtualService)" }}
-{{- end }}
-{{- end }}
+{{- /* Single-switch Istio model: serviceMesh.istio.enabled controls all Istio resources */ -}}
 {{- end }}
 
 {{/*
@@ -278,6 +293,11 @@ Kafka topic prefix (for Deprecated topics)
 
 {{/*
 Client properties file content
+
+Why this helper exists:
+- Keeps large application properties in one place
+- Ensures both local and cloud deployments derive values consistently
+- Centralizes Kafka/Valkey/security substitutions from Helm values
 */}}
 {{- define "federator-suite.clientProperties" -}}
 # Kafka Configuration (Sender)
@@ -298,6 +318,7 @@ kafka.consumerGroup={{ .Values.federatorClient.config.consumerGroup | default (p
 
 # Redis/Valkey Configuration
 {{- $password := include "federator-suite.valkey.password" . -}}
+{{- $username := include "federator-suite.valkey.username" . -}}
 {{- $redisTlsEnabled := false -}}
 {{- if .Values.valkey.external }}
 {{- if kindIs "bool" .Values.valkey.external }}
@@ -313,7 +334,7 @@ redis.port={{ include "federator-suite.valkey.port" . }}
 redis.tls.enabled={{ ternary "true" "false" $redisTlsEnabled }}
 redis.prefix={{ .Values.federatorClient.config.redisPrefix | default (printf "federator-client-%s" (.Values.global.orgName | lower)) }}
 {{- if $password }}
-redis.username=
+redis.username={{ $username }}
 redis.password={{ $password }}
 redis.aes.key=
 {{- else }}
@@ -364,6 +385,11 @@ client.files.temp.dir={{ .Values.federatorClient.config.storage.local.tempDir | 
 
 {{/*
 Server properties file content
+
+Why this helper exists:
+- Uses the same value sources as the client helper
+- Avoids duplicated templating logic across ConfigMaps
+- Keeps storage/Kafka/Valkey/auth wiring consistent per environment
 */}}
 {{- define "federator-suite.serverProperties" -}}
 # Kafka Configuration (Consumer)
@@ -415,6 +441,7 @@ management.node.base.url={{ .Values.global.managementNode.baseUrl }}
 
 # Redis/Valkey Configuration
 {{- $password := include "federator-suite.valkey.password" . -}}
+{{- $username := include "federator-suite.valkey.username" . -}}
 {{- $redisTlsEnabled := false -}}
 {{- if .Values.valkey.external }}
 {{- if kindIs "bool" .Values.valkey.external }}
@@ -429,6 +456,13 @@ redis.host={{ include "federator-suite.valkey.host" . }}
 redis.port={{ include "federator-suite.valkey.port" . }}
 redis.tls.enabled={{ ternary "true" "false" $redisTlsEnabled }}
 redis.prefix={{ .Values.federatorServer.config.redisPrefix | default (printf "federator-server-%s" (.Values.global.orgName | lower)) }}
+{{- if $password }}
+redis.username={{ $username }}
+redis.password={{ $password }}
+{{- else }}
+redis.username=
+redis.password=
+{{- end }}
 
 # File Storage Configuration
 file.stream.chunk.size=1000

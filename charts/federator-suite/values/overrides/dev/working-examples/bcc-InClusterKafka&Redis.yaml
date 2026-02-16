@@ -9,20 +9,17 @@ global:
   orgPrefix: bcc
   namespace: helm-ia-federation  # Namespace must already exist in EKS cluster
 
-# External MSK Kafka for EKS
+# In-cluster Kafka for EKS (mirrors local footprint)
 kafka:
-  external: true
-  # MSK with SASL_SSL + SCRAM-SHA-512 authentication
+  external: false
+  enabled: true
+  # SASL SCRAM-SHA-512 authentication
   # Credentials configured in bcc-secrets.yaml
-  externalConfig:
-    bootstrapServers: "b-2.devianodemsk.6fou3l.c3.kafka.eu-west-2.amazonaws.com:9096,b-1.devianodemsk.6fou3l.c3.kafka.eu-west-2.amazonaws.com:9096"
-    securityProtocol: "SASL_SSL"
-    saslMechanism: "SCRAM-SHA-512"
 
-# In-cluster Bitnami Valkey
+# In-cluster Valkey for EKS (mirrors local footprint)
 valkey:
-  external: false  # Use in-cluster Valkey
-  enabled: true    # Deploy Bitnami Valkey subchart
+  external: false
+  enabled: true  # Enable in-cluster Bitnami Valkey
 
 # Federator Server - AWS Dev
 federatorServer:
@@ -67,7 +64,7 @@ federatorServer:
 federatorClient:
   image:
     repository: 537124944113.dkr.ecr.eu-west-2.amazonaws.com/ndtp/ia-federator-client
-    tag: "28-01-26"  # 
+    tag: "28-01-26"  # from org2 kustomize overlay
     pullPolicy: IfNotPresent
   
   replicaCount: 1

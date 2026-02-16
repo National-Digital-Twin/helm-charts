@@ -1,9 +1,0 @@
-# Azure AKS scenario: in-cluster Kafka + in-cluster Valkey
-kafka:
-  external: false
-  inClusterConfig:
-    enabled: true
-
-valkey:
-  external: false
-  enabled: true

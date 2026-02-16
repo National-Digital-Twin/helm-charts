@@ -1,4 +1,4 @@
-{{- if and .Values.serviceMesh.istio.enabled .Values.serviceMesh.istio.destinationRule.enabled }}
+{{- if .Values.serviceMesh.istio.enabled }}
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule

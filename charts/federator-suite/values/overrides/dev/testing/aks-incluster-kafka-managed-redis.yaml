@@ -1,9 +1,0 @@
-# Azure AKS scenario: in-cluster Kafka + Azure Managed Redis
-kafka:
-  external: false
-  inClusterConfig:
-    enabled: true
-
-valkey:
-  external: true
-  enabled: false
