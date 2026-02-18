@@ -1,0 +1,185 @@
+# BCC Dev Environment Configuration (AWS EKS)
+# Self-contained: AWS-specific + BCC-specific configuration
+# Usage: helm install bcc . -f values/common-values.yaml -f values/kafka.yaml -f values/valkey.yaml -f values/federator.yaml -f values/overrides/dev/bcc.yaml -f values/overrides/dev/secrets/bcc-secrets.yaml
+
+global:
+  environment: dev
+  clusterType: eks
+  orgName: bcc
+  orgPrefix: bcc
+  namespace: helm-ia-federation  # Namespace must already exist in EKS cluster
+
+# External MSK Kafka for EKS
+kafka:
+  external: true
+  # MSK with SASL_SSL + SCRAM-SHA-512 authentication
+  # Credentials configured in bcc-secrets.yaml
+  externalConfig:
+    bootstrapServers: "b-2.devianodemsk.6fou3l.c3.kafka.eu-west-2.amazonaws.com:9096,b-1.devianodemsk.6fou3l.c3.kafka.eu-west-2.amazonaws.com:9096"
+    securityProtocol: "SASL_SSL"
+    saslMechanism: "SCRAM-SHA-512"
+
+# External ElastiCache Redis/Valkey for EKS
+valkey:
+  external: true
+  externalConfig:
+    host: "clustercfg.dev-valkey-cluster.kquwra.euw2.cache.amazonaws.com"
+    port: 6379
+    tls:
+      enabled: true  # ElastiCache cluster requires TLS
+    auth:
+      enabled: true  # ElastiCache has AuthTokenEnabled=True
+      username: "default"  # Default Redis/Valkey user (token in bcc-secrets.yaml)
+
+# Federator Server - AWS Dev
+federatorServer:
+  image:
+    repository: 537124944113.dkr.ecr.eu-west-2.amazonaws.com/ndtp/ia-federator-server
+    tag: "28-01-26"  # from org2 kustomize overlay
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 1
+  
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::537124944113:role/federator-access-role"
+  
+  podAnnotations:
+    traffic.sidecar.istio.io/excludeOutboundPorts: "6379"  # Exclude Redis from Istio mesh
+  
+  resources:
+    requests:
+      cpu: 512m
+      memory: 1Gi
+    limits:
+      cpu: 512m
+      memory: 1Gi
+  
+  service:
+    type: ClusterIP
+  
+  # BCC-specific configuration
+  config:
+    clientName: "ndtp.dbt.gov.uk.bcc"
+    redisPrefix: "federator-server-bcc"
+    keepAliveTime: 10
+    mtlsEnabled: true
+    storage:
+      provider: "S3"
+      s3:
+        bucket: "537124944113-federator-orgid2-bcc"
+        region: "eu-west-2"
+
+# Federator Client - AWS Dev
+federatorClient:
+  image:
+    repository: 537124944113.dkr.ecr.eu-west-2.amazonaws.com/ndtp/ia-federator-client
+    tag: "28-01-26"  # from org2 kustomize overlay
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 1
+  
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::537124944113:role/federator-access-role"
+  
+  podAnnotations:
+    traffic.sidecar.istio.io/excludeOutboundPorts: "6379"  # Exclude Redis from Istio mesh
+  
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
+  
+  service:
+    type: ClusterIP
+  
+  # BCC-specific configuration
+  config:
+    kafkaTopicPrefix: "DeprecatedBCC"
+    consumerGroup: "ndtp.dbt.gov.uk.bcc"
+    redisPrefix: "federator-client-bcc"
+    mtlsEnabled: true
+    tlsEnabled: true
+    storage:
+      provider: "S3"
+      s3:
+        bucket: "537124944113-federator-orgid2-bcc"
+        region: "eu-west-2"
+  
+  # Override client-specific env for BCC
+  env:
+    IDP_KEYSTORE_PATH: /secrets/federation-cert/client-org1-keystore.jks
+    CLIENT_P12_FILE_PATH: /secrets/federation-client-p12/client-org1.p12
+
+# UIs disabled by default (kustomize didn’t expose them). Enable and choose LB/NLB later if needed.
+kafkaUi:
+  enabled: true
+  image:
+    repository: provectuslabs/kafka-ui
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+
+valkeyUi:
+  enabled: true
+  image:
+    repository: redis/redisinsight
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+
+# Istio configuration for EKS
+# Enabled to match ia-federation namespace configuration
+serviceMesh:
+  istio:
+    enabled: true
+    gateway:
+      name: ia-federator-ingress-gateway
+      selector:
+        app: istio-ingress-passthrough
+      hosts:
+        - "helm-ia-federator-org1-aws.dev.ndtp.co.uk"
+    virtualService:
+      name: federator-org1-vs
+      hosts:
+        - "helm-ia-federator-org1-aws.dev.ndtp.co.uk"
+      gatewayRefs:
+        - ia-federator-ingress-gateway
+    destinationRule:
+      name: federator-server-org1-dr
+    peerAuthentication:
+      mode: STRICT
+    authorizationPolicy:
+      denyByDefault: false
+      allowedServiceAccounts:
+        - cluster.local/ns/istio-ingress/sa/istio-ingress
+      allowedNamespaces:
+        - helm-ia-federation
+        - ia-federation
+        - ia-federation-org2
+        - istio-ingress
+        - ia-management-node
+
+# Management Node - AWS Dev
+managementNode:
+  baseUrl: "https://ia-management-node.dev.ndtp.co.uk"
+
+# BCC-specific secrets (defined in secrets/bcc-secrets.yaml)
+secrets:
+  clientConnectionConfig:
+    content: |
+      {
+        "connections": [
+          {
+            "name": "env-server",
+            "host": "federator-server.env-dev.ndtp.co.uk",
+            "port": 8080
+          }
+        ]
+      }

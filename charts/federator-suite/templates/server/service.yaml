@@ -1,0 +1,41 @@
+{{- if .Values.federatorServer.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "federator-suite.server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{ include "federator-suite.server.labels" . | nindent 4 }}
+  {{- with .Values.federatorServer.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.federatorServer.service.type }}
+  {{- if and (eq .Values.federatorServer.service.type "NodePort") .Values.federatorServer.service.nodePort }}
+  ports:
+  - port: {{ .Values.federatorServer.config.serverPort }}
+    targetPort: http
+    protocol: TCP
+    name: http
+    nodePort: {{ .Values.federatorServer.service.nodePort }}
+  - port: {{ .Values.federatorServer.config.jobsDashboardPort }}
+    targetPort: jobs-dashboard
+    protocol: TCP
+    name: jobs-dashboard
+  {{- else }}
+  ports:
+  - port: {{ .Values.federatorServer.config.serverPort }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: {{ .Values.federatorServer.config.jobsDashboardPort }}
+    targetPort: jobs-dashboard
+    protocol: TCP
+    name: jobs-dashboard
+  {{- end }}
+  selector:
+    app: federator-server
+    {{ include "federator-suite.selectorLabels" . | nindent 4 }}
+{{- end }}

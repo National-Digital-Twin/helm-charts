@@ -1,0 +1,43 @@
+# HEG Organization Configuration (Local)
+
+global:
+  orgName: heg
+  orgNumber: org3  # Used for certificate naming: client-org3.p12, client-org3-keystore.jks
+  namespace: ia-federation-heg  # Will be created by Makefile for local env
+
+federatorServer:
+  config:
+    redisPrefix: "federator-server-heg"
+
+federatorClient:
+  config:
+    kafkaTopicPrefix: "DeprecatedHEG"
+    kafkaConsumerGroup: "ndtp.dbt.gov.uk.heg"
+    redisPrefix: "federator-client-heg"
+  
+  # Override client-specific env
+  env:
+    IDP_KEYSTORE_PATH: /secrets/federation-cert/client-heg-keystore.jks
+    CLIENT_P12_FILE_PATH: /secrets/federation-client-p12/client-heg.p12
+
+# HEG-specific secrets (override in values-secrets.yaml)
+secrets:
+  idp:
+    clientId: "FEDERATOR_HEG"
+  
+  clientConnectionConfig:
+    content: |
+      {
+        "connections": [
+          {
+            "name": "bcc-server",
+            "host": "federator-server.ia-federation.svc.cluster.local",
+            "port": 8080
+          },
+          {
+            "name": "env-server",
+            "host": "federator-server.ia-federation-env.svc.cluster.local",
+            "port": 8080
+          }
+        ]
+      }

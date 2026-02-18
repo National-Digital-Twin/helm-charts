@@ -1,0 +1,24 @@
+{{- if .Values.serviceMesh.istio.enabled }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ .Values.serviceMesh.istio.gateway.name | default "ia-federator-ingress-gateway" }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "federator-suite.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- toYaml .Values.serviceMesh.istio.gateway.selector | nindent 4 }}
+  servers:
+    - hosts:
+      {{- range .Values.serviceMesh.istio.gateway.hosts }}
+        - {{ . | quote }}
+      {{- end }}
+      port:
+        name: tls-passthrough
+        number: 443
+        protocol: TLS
+      tls:
+        mode: PASSTHROUGH
+{{- end }}
