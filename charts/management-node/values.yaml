@@ -20,7 +20,7 @@ serviceAccount:
 podAnnotations: {}
 
 podSecurityContext: {}
-securityContext: {}
+securityContext: { runAsNonRoot: true, runAsUser: 10001 }
 
 app:
   server:
@@ -57,12 +57,12 @@ app:
         jwsAlgorithm: "RS256"
       opaquetoken:
         introspectionUri: "http://keycloak.keycloak.svc.cluster.local/realms/management-node/protocol/openid-connect/token/introspect"
-        clientSecret: ""  # Set this value or use --set at deployment time
+        clientSecret: "" # Set this value or use --set at deployment time
         existingSecret:
           # Use an existing secret instead of clientSecret value
           # If set, this takes precedence over clientSecret
-          name: ""  # Name of the existing secret
-          key: ""   # Key within the secret that contains the clientSecret
+          name: "" # Name of the existing secret
+          key: "" # Key within the secret that contains the clientSecret
   javaOpts: "-Djava.security.egd=file:/dev/./urandom -XX:MaxRAMPercentage=75.0 -Djava.io.tmpdir=/app/tmp"
   extraEnv: []
 
