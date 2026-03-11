@@ -11,8 +11,8 @@ The National Digital Twin Programme (NDTP) would like to acknowledge the contrib
 Over time, the following organisations have provided technical expertise, development support, and domain knowledge that have contributed to the evolution of this project:
 
 - [SiXworks Ltd](https://sixworks.net/)
-- [Kainos Group PLC](https://www.kainos.com/)
-- [Telicent Ltd](https://telicent.io/)
+- [Kainos](https://www.kainos.com/)
+- [Telicent](https://telicent.io/)
   
 We are grateful for the collaboration that has helped shape this repository.
 
@@ -28,4 +28,5 @@ All contributions are made in accordance with the repository’s licensing terms
 
 © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) the governing entity.
 Licensed under the Open Government Licence v3.0.
-For full licensing terms, see [OGL_LICENSE.md](./OGL_LICENSE.md). 
+For full licensing terms, see [OGL_LICENSE.md](./OGL_LICENSE.md).
+
