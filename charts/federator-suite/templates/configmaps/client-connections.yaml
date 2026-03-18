@@ -1,3 +1,4 @@
+{{- if false }}
 {{- if .Values.federatorClient.enabled }}
 ---
 apiVersion: v1
@@ -9,4 +10,5 @@ metadata:
     {{ include "federator-suite.client.labels" . | nindent 4 }}
 data:
   connection-configuration.json: {{ .Values.secrets.clientConnectionConfig.content | toJson }}
+{{- end }}
 {{- end }}

@@ -38,6 +38,7 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ include "federator-suite.server.serviceAccountName" . }}
+      restartPolicy: Always
       {{- with .Values.federatorServer.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

@@ -111,7 +111,7 @@ federatorServer:
     
     # Storage provider configuration
     storage:
-      provider: LOCAL  # LOCAL, S3, or AZURE
+      provider: LOCAL  # LOCAL, S3, AZURE, or GCS
       s3:
         bucket: ""
         region: ""
@@ -119,6 +119,8 @@ federatorServer:
         connectionString: ""
         accountName: ""
         endpoint: ""
+      gcp:
+        bucket: ""
   
   # Environment variables for the deployment
   env:
@@ -243,7 +245,7 @@ federatorClient:
     
     # File storage configuration
     storage:
-      provider: LOCAL  # LOCAL, S3, or AZURE
+      provider: LOCAL  # LOCAL, S3, AZURE, or GCS
       local:
         tempDir: /tmp/federator-files
       s3:
@@ -254,6 +256,8 @@ federatorClient:
         accountName: ""
         endpoint: ""
         container: ""
+      gcp:
+        bucket: ""
     
     # Jobs dashboard (JobRunr)
     jobsDashboardPort: 8085

@@ -20,6 +20,7 @@ spec:
       annotations:
         traffic.sidecar.istio.io/excludeOutboundPorts: "6379"  # Exclude Valkey from Istio mesh
     spec:
+      restartPolicy: Always
       containers:
       - name: valkey-ui
         image: "{{ .Values.valkeyUi.image.repository }}:{{ .Values.valkeyUi.image.tag }}"

@@ -378,6 +378,8 @@ azure.storage.connection.string={{ .Values.federatorClient.config.storage.azure.
 azure.storage.account.name={{ .Values.federatorClient.config.storage.azure.accountName }}
 azure.storage.endpoint={{ .Values.federatorClient.config.storage.azure.endpoint }}
 files.azure.container={{ .Values.federatorClient.config.storage.azure.container }}
+{{- else if eq (.Values.federatorClient.config.storage.provider | upper) "GCP" }}
+files.gcp.bucket={{ .Values.federatorClient.config.storage.gcp.bucket }}
 {{- else if eq (.Values.federatorClient.config.storage.provider | upper) "LOCAL" }}
 client.files.temp.dir={{ .Values.federatorClient.config.storage.local.tempDir | default "" }}
 {{- end }}
@@ -467,10 +469,14 @@ redis.password=
 # File Storage Configuration
 file.stream.chunk.size=1000
 {{- if eq (.Values.federatorServer.config.storage.provider | upper) "S3" }}
+files.storage.provider=S3
 files.s3.bucket={{ .Values.federatorServer.config.storage.s3.bucket }}
 aws.s3.region={{ .Values.federatorServer.config.storage.s3.region }}
 {{- else if eq (.Values.federatorServer.config.storage.provider | upper) "AZURE" }}
+files.storage.provider=AZURE
 azure.storage.connection.string={{ .Values.federatorServer.config.storage.azure.connectionString }}
-client.files.storage.provider=AZURE
+{{- else if eq (.Values.federatorServer.config.storage.provider | upper) "GCP" }}
+files.storage.provider=GCP
+files.gcp.bucket={{ .Values.federatorServer.config.storage.gcp.bucket }}
 {{- end }}
 {{- end }}

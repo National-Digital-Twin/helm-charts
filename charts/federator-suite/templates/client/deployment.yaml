@@ -38,6 +38,7 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ include "federator-suite.client.serviceAccountName" . }}
+      restartPolicy: Always
       {{- with .Values.federatorClient.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -67,8 +68,6 @@ spec:
         envFrom:
         - configMapRef:
             name: federator-client-config
-        - secretRef:
-            name: federator-client-secret-config
         # HTTP probes use the JobRunr dashboard endpoint.
         # This confirms the client container is responsive and ready to serve traffic.
         livenessProbe:
@@ -92,8 +91,6 @@ spec:
         volumeMounts:
         - name: config-volume
           mountPath: /config
-        - name: client-connections
-          mountPath: /client-connections
         - name: common-configuration-volume
           mountPath: /common-configuration
         - name: federation-cert
@@ -110,9 +107,6 @@ spec:
       - name: config-volume
         configMap:
           name: federator-client-properties
-      - name: client-connections
-        configMap:
-          name: federator-client-connections
       - name: common-configuration-volume
         configMap:
           name: common-configuration
