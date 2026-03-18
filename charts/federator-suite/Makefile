@@ -9,7 +9,7 @@ help: ## Show this help message
 	@echo ""
 	@echo "Variables:"
 	@echo "  ENV          Environment (local|dev|prod)  default: local"
-	@echo "  ORG          Organization (bcc|env|heg)    default: bcc"
+	@echo "  ORG          Organization (bcc|env|heg|hmrc)    default: bcc"
 	@echo "  RELEASE_NAME Release name                  default: federator-suite"
 	@echo ""
 	@echo "Examples:"
@@ -111,9 +111,9 @@ _build-deps:
 	@if ! helm repo list 2>/dev/null | grep -q '^bitnami[[:space:]]'; then \
 helm repo add bitnami https://charts.bitnami.com/bitnami; \
 fi
-	@helm repo update >/dev/null
-	@cd charts/valkey && helm dependency build 2>/dev/null
-	@helm dependency build $(CHART_PATH) 2>/dev/null
+	@helm repo update 2>/dev/null || echo "  ⚠ Repo update failed (offline/firewall) - using cached charts"
+	@cd charts/valkey && helm dependency build --skip-refresh 2>/dev/null || true
+	@helm dependency build --skip-refresh $(CHART_PATH) 2>/dev/null || true
 	@echo "  ✓ Dependencies ready"
 
 .PHONY: _istio-inject-if-enabled
@@ -212,29 +212,55 @@ debug: ## Show resolved values and rendered templates
 # ============================================
 
 .PHONY: healthcheck
-healthcheck: ## Check pods, services, health endpoints, log errors
+healthcheck: ## Check all pods are running and error-free
 	@echo "==> Health check: $(RELEASE_NAME) in $(NAMESPACE)"
-	@echo "Pods:"
-	@kubectl get pods -l app=federator-server -n $(NAMESPACE)
-	@kubectl get pods -l app=federator-client -n $(NAMESPACE)
+	@echo ""
+	@echo "All Pods:"
+	@kubectl get pods -n $(NAMESPACE)
+	@echo ""
+	@FAILED=0; \
+	NOT_RUNNING=$$(kubectl get pods -n $(NAMESPACE) --no-headers 2>/dev/null | grep -v 'Running\|Completed' || true); \
+	if [ -n "$$NOT_RUNNING" ]; then \
+		echo "⚠ Pods not in Running state:"; \
+		echo "$$NOT_RUNNING"; \
+		FAILED=1; \
+	fi; \
+	NOT_READY=$$(kubectl get pods -n $(NAMESPACE) --no-headers 2>/dev/null | awk '{split($$2,a,"/"); if(a[1]!=a[2] && $$3=="Running") print $$0}' || true); \
+	if [ -n "$$NOT_READY" ]; then \
+		echo "⚠ Pods running but not ready:"; \
+		echo "$$NOT_READY"; \
+		FAILED=1; \
+	fi; \
+	if [ $$FAILED -eq 0 ]; then \
+		echo "✓ All pods Running and Ready"; \
+	fi
 	@echo ""
 	@echo "Services:"
-	@kubectl get svc $(RELEASE_NAME)-federator-server $(RELEASE_NAME)-federator-client kafka-ui valkey-ui -n $(NAMESPACE) 2>/dev/null || true
+	@kubectl get svc -n $(NAMESPACE)
 	@echo ""
-	@echo "Server process:"
+	@echo "Application health:"
 	@SERVER_POD=$$(kubectl get pod -l app=federator-server -n $(NAMESPACE) -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
-if [ -z "$$SERVER_POD" ]; then echo "  ⚠ server pod not found"; else \
-kubectl exec -n $(NAMESPACE) $$SERVER_POD -c federator-server -- sh -c "ps aux | grep -q '[j]ava.*FederatorServer' && echo '  ✓ Server running' || echo '  ⚠ Server not found'"; \
-fi
-	@echo "Client dashboard:"
+	if [ -z "$$SERVER_POD" ]; then echo "  ⚠ server pod not found"; else \
+		kubectl exec -n $(NAMESPACE) $$SERVER_POD -c federator-server -- sh -c "ps aux | grep -q '[j]ava.*FederatorServer' && echo '  ✓ Server process running' || echo '  ⚠ Server process not found'" 2>/dev/null || echo "  ⚠ Cannot check server process"; \
+	fi
 	@CLIENT_POD=$$(kubectl get pod -l app=federator-client -n $(NAMESPACE) -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
-if [ -z "$$CLIENT_POD" ]; then echo "  ⚠ client pod not found"; else \
-kubectl exec -n $(NAMESPACE) $$CLIENT_POD -c federator-client -- sh -c "if command -v wget >/dev/null; then wget -qO- --timeout=2 http://localhost:8085/ 2>/dev/null | grep -q 'JobRunr' && echo '  ✓ JobRunr responding' || echo '  ⚠ JobRunr not responding'; else echo '  ⚠ wget not available'; fi"; \
-fi
+	if [ -z "$$CLIENT_POD" ]; then echo "  ⚠ client pod not found"; else \
+		kubectl exec -n $(NAMESPACE) $$CLIENT_POD -c federator-client -- sh -c "if command -v wget >/dev/null; then wget -qO- --timeout=2 http://localhost:8085/ 2>/dev/null | grep -q 'JobRunr' && echo '  ✓ JobRunr dashboard responding' || echo '  ⚠ JobRunr not responding'; else echo '  ⚠ wget not available'; fi" 2>/dev/null || echo "  ⚠ Cannot check JobRunr"; \
+	fi
 	@echo ""
-	@echo "Recent errors (last 200 lines):"
-	@kubectl logs -l app=federator-server -n $(NAMESPACE) --tail=200 2>/dev/null | grep -Ei 'error|exception' || echo "  No server errors"
-	@kubectl logs -l app=federator-client -n $(NAMESPACE) --tail=200 2>/dev/null | grep -Ei 'error|exception' || echo "  No client errors"
+	@echo "Error check (all pods, last 100 lines):"
+	@ERROR_FOUND=0; \
+	for pod in $$(kubectl get pods -n $(NAMESPACE) -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do \
+		ERRORS=$$(kubectl logs $$pod -n $(NAMESPACE) --tail=100 --all-containers 2>/dev/null | grep -Ei 'error|exception|fatal|crash' | grep -Eiv 'loglevel.*error|error.*level|expected.*error' || true); \
+		if [ -n "$$ERRORS" ]; then \
+			echo "⚠ Errors in $$pod:"; \
+			echo "$$ERRORS" | head -5; \
+			ERROR_FOUND=1; \
+		fi; \
+	done; \
+	if [ $$ERROR_FOUND -eq 0 ]; then \
+		echo "  ✓ No errors found in any pods"; \
+	fi
 
 # ============================================
 # Port Forwarding

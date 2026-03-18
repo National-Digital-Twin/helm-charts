@@ -16,9 +16,10 @@ spec:
   {{- if and (eq .Values.federatorServer.service.type "NodePort") .Values.federatorServer.service.nodePort }}
   ports:
   - port: {{ .Values.federatorServer.config.serverPort }}
-    targetPort: http
+    targetPort: {{ .Values.federatorServer.config.serverPort }}
     protocol: TCP
-    name: http
+    appProtocol: tls
+    name: grpc-tls
     nodePort: {{ .Values.federatorServer.service.nodePort }}
   - port: {{ .Values.federatorServer.config.jobsDashboardPort }}
     targetPort: jobs-dashboard
@@ -27,9 +28,10 @@ spec:
   {{- else }}
   ports:
   - port: {{ .Values.federatorServer.config.serverPort }}
-    targetPort: http
+    targetPort: {{ .Values.federatorServer.config.serverPort }}
     protocol: TCP
-    name: http
+    appProtocol: tls
+    name: grpc-tls
   - port: {{ .Values.federatorServer.config.jobsDashboardPort }}
     targetPort: jobs-dashboard
     protocol: TCP

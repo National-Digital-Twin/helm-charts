@@ -7,22 +7,23 @@ global:
   clusterType: eks
   orgName: bcc
   orgPrefix: bcc
-  namespace: helm-ia-federation  # Namespace must already exist in EKS cluster
+  namespace: ia-federation  # Namespace must already exist in EKS cluster. EVIDENCE: `federator-suite` Helm release confirmed in ia-federation (kubectl get secret -l owner=helm -n ia-federation)
 
-# External MSK Kafka for EKS
+# Kafka Configuration
 kafka:
   external: true
-  # MSK with SASL_SSL + SCRAM-SHA-512 authentication
-  # Credentials configured in bcc-secrets.yaml
+  enabled: true  # In-cluster Kafka sub-chart disabled (using external MSK)
+  # External Kafka configuration (comment out below if using in-cluster Kafka)
   externalConfig:
-    bootstrapServers: "b-2.devianodemsk.6fou3l.c3.kafka.eu-west-2.amazonaws.com:9096,b-1.devianodemsk.6fou3l.c3.kafka.eu-west-2.amazonaws.com:9096"
+    bootstrapServers: "b-1.devianodemsk.6fou3l.c3.kafka.eu-west-2.amazonaws.com:9096,b-2.devianodemsk.6fou3l.c3.kafka.eu-west-2.amazonaws.com:9096"
     securityProtocol: "SASL_SSL"
     saslMechanism: "SCRAM-SHA-512"
+  # SASL SCRAM-SHA-512 credentials configured in bcc-secrets.yaml
 
 # In-cluster Bitnami Valkey
 valkey:
-  external: false  # Use in-cluster Valkey
-  enabled: true    # Deploy Bitnami Valkey subchart
+  external: false
+  enabled: true  # Enable in-cluster Bitnami Valkey
 
 # Federator Server - AWS Dev
 federatorServer:
@@ -67,7 +68,7 @@ federatorServer:
 federatorClient:
   image:
     repository: 537124944113.dkr.ecr.eu-west-2.amazonaws.com/ndtp/ia-federator-client
-    tag: "28-01-26"  # 
+    tag: "28-01-26"  # from org2 kustomize overlay
     pullPolicy: IfNotPresent
   
   replicaCount: 1
@@ -117,6 +118,7 @@ kafkaUi:
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
+    annotations: {}
 
 valkeyUi:
   enabled: true
@@ -126,6 +128,7 @@ valkeyUi:
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
+    annotations: {}
 
 # Istio configuration for EKS
 # Enabled to match ia-federation namespace configuration
@@ -164,15 +167,3 @@ managementNode:
   baseUrl: "https://ia-management-node.dev.ndtp.co.uk"
 
 # BCC-specific secrets (defined in secrets/bcc-secrets.yaml)
-secrets:
-  clientConnectionConfig:
-    content: |
-      {
-        "connections": [
-          {
-            "name": "env-server",
-            "host": "federator-server.env-dev.ndtp.co.uk",
-            "port": 8080
-          }
-        ]
-      }

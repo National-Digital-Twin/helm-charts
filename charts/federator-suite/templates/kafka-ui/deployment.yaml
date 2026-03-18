@@ -18,6 +18,7 @@ spec:
       labels:
         app: kafka-ui
     spec:
+      restartPolicy: Always
       containers:
       - name: kafka-ui
         image: "{{ .Values.kafkaUi.image.repository }}:{{ .Values.kafkaUi.image.tag }}"
