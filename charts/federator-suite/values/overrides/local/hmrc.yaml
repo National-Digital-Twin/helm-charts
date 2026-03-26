@@ -1,0 +1,56 @@
+# HMRC Organization Configuration (Local KIND)
+# GKE-equivalent but running locally with Shamir unseal (devMode)
+
+global:
+  orgName: hmrc
+  orgNumber: org4  # cert naming: client-org4.p12, client-org4-keystore.jks
+  namespace: ia-federation  # created by Makefile for local env
+
+federatorServer:
+  config:
+    clientName: "ndtp.dbt.gov.uk.hmrc"
+    redisPrefix: "federator-server-hmrc"
+    storage:
+      provider: "LOCAL"
+
+federatorClient:
+  config:
+    kafkaTopicPrefix: "DeprecatedHMRC"
+    kafkaConsumerGroup: "ndtp.dbt.gov.uk.hmrc"
+    redisPrefix: "federator-client-hmrc"
+    storage:
+      provider: "LOCAL"
+
+  # Override client-specific env
+  env:
+    IDP_KEYSTORE_PATH: /secrets/federation-cert/client-org4-keystore.jks
+    CLIENT_P12_FILE_PATH: /secrets/federation-client-p12/client-org4.p12
+
+certificateManager:
+  config:
+    managementNode:
+      baseUrl: "http://ia-management-node.ia-management.svc.cluster.local:8080"
+    oauth2:
+      # Disabled for local KIND — no real IdP accessible; cert-manager runs in passive mode
+      enabled: false
+      tokenUri: ""
+      clientId: "FEDERATOR_HMRC"
+    cert:
+      subjectOrg: "hmrc"
+      subjectCountry: "GB"
+
+secrets:
+  idp:
+    clientId: "FEDERATOR_HMRC"
+
+  clientConnectionConfig:
+    content: |
+      {
+        "connections": [
+          {
+            "name": "bcc-server",
+            "host": "federator-server.ia-federation.svc.cluster.local",
+            "port": 8080
+          }
+        ]
+      }

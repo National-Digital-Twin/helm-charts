@@ -91,6 +91,68 @@ serviceMesh:
   istio:
     enabled: false
 
+# Certificate Manager — Local
+certificateManager:
+  image:
+    repository: ndtp/federator-certificate-manager
+    tag: "local"          # locally built image with configurable Vault auth
+    pullPolicy: Never
+  persistence:
+    # KIND local-path provisioner only supports ReadWriteOnce (not ReadWriteMany)
+    accessMode: ReadWriteOnce
+  vaultToken:
+    # Init container blocks until vault-setup sidecar creates token secret
+    useSecret: true
+  config:
+    vault:
+      # Override default KUBERNETES → TOKEN for local Shamir-seal Vault
+      # Corresponds to application.yml: authentication: ${VAULT_AUTHENTICATION:token}
+      authentication: TOKEN
+
 # Management Node - Local
 managementNode:
   baseUrl: "http://localhost:8082"  # Adjust if management node is also local
+
+# ── Vault — Local (KIND) Configuration ──────────────────────────────────────
+# Uses Shamir seal (no cloud KMS), single replica, stores credentials in k8s Secret
+vault:
+  devMode: true
+
+  ha:
+    replicas: 1
+
+  vault:
+    server:
+      ha:
+        enabled: false
+        replicas: 1
+        raft:
+          enabled: true
+          config: |
+            ui = true
+
+            listener "tcp" {
+              tls_disable = 1
+              address     = "[::]:8200"
+              cluster_address = "[::]:8201"
+            }
+
+            storage "raft" {
+              path = "/vault/data"
+            }
+
+            # No seal stanza — uses Shamir seal for local development
+            service_registration "kubernetes" {}
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 250m
+          memory: 256Mi
+      dataStorage:
+        enabled: true
+        size: 1Gi
+      auditStorage:
+        enabled: true
+        size: 1Gi

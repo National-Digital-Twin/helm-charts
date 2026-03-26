@@ -1,0 +1,68 @@
+# ============================================================================
+# Example: Dev Environment Vault + Certificate Manager Override (GCP)
+# ============================================================================
+# EXAMPLE ONLY — all values below are PLACEHOLDERS.
+# Copy this file and fill in actual values from Terraform outputs:
+# ============================================================================
+
+vault:
+  # cloudProvider auto-derived from global.clusterType (gke→gcp)
+  # cloudProvider: gcp   ← only needed if clusterType is not set in env override
+  seal:
+    gcp:
+      project: "my-gcp-project"
+      region: "europe-west2"
+      keyRing: "vault-unseal-keyring"
+      cryptoKey: "vault-unseal-key"
+  serviceAccount:
+    annotations:
+      # From: tofu output fed_vault_gcp_service_account
+      iam.gke.io/gcp-service-account: "fed-vault-unseal@my-gcp-project.iam.gserviceaccount.com"
+  secretsManager:
+    # GCP Secret Manager resource name
+    secretName: "projects/my-gcp-project/secrets/dev-ia-node-fed-vault-secrets"
+  # Override Raft config with GCP Cloud KMS seal
+  vault:
+    server:
+      ha:
+        raft:
+          config: |
+            ui = true
+
+            listener "tcp" {
+              tls_disable = 1
+              address     = "[::]:8200"
+              cluster_address = "[::]:8201"
+            }
+
+            storage "raft" {
+              path = "/vault/data"
+            }
+
+            seal "gcpckms" {
+              project    = "my-gcp-project"
+              region     = "europe-west2"
+              key_ring   = "vault-unseal-keyring"
+              crypto_key = "vault-unseal-key"
+            }
+
+            service_registration "kubernetes" {}
+
+# Certificate Manager — EXAMPLE values, replace with actuals
+certificateManager:
+  image:
+    repository: "PLACEHOLDER_REGISTRY/federator-certificate-manager"
+    tag: "PLACEHOLDER_TAG"
+  config:
+    managementNode:
+      baseUrl: "https://PLACEHOLDER_MANAGEMENT_NODE_HOST:443"
+    oauth2:
+      enabled: true
+      tokenUri: "https://PLACEHOLDER_KEYCLOAK_HOST/realms/PLACEHOLDER_REALM/protocol/openid-connect/token"
+      clientId: "PLACEHOLDER_CLIENT_ID"
+      clientSecretRef:
+        name: "oauth2-client-secret"
+        key: "client-secret"
+    cert:
+      subjectOrg: "PLACEHOLDER_ORG"
+      subjectCountry: "GB"

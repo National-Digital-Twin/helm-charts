@@ -26,7 +26,7 @@ RELEASE_NAME ?= federator-suite
 ORG ?= bcc
 CHART_PATH = .
 
-COMPONENT_VALUES = -f values/common-values.yaml -f values/kafka.yaml -f values/valkey.yaml -f values/federator.yaml -f values/kafka-ui.yaml -f values/valkey-ui.yaml -f values/istio.yaml
+COMPONENT_VALUES = -f values/common-values.yaml -f values/kafka.yaml -f values/valkey.yaml -f values/vault.yaml -f values/certificate-manager.yaml -f values/federator.yaml -f values/kafka-ui.yaml -f values/valkey-ui.yaml -f values/istio.yaml
 
 ifeq ($(ENV),local)
 VALUES_FILES = $(COMPONENT_VALUES) -f values/overrides/local/local.yaml -f values/overrides/local/$(ORG).yaml
@@ -60,10 +60,17 @@ deploy: ## Deploy federator suite (ENV=local|dev|prod ORG=bcc|env|heg)
 	@$(MAKE) _build-deps
 	@$(MAKE) _istio-inject-if-enabled
 	@echo "==> Installing chart..."
+ifeq ($(ENV),local)
 	@helm upgrade --install $(RELEASE_NAME) $(CHART_PATH) \
 	-n $(NAMESPACE) \
 $(VALUES_FILES) \
 	--wait --timeout 10m
+else
+	@helm upgrade --install $(RELEASE_NAME) $(CHART_PATH) \
+	-n $(NAMESPACE) \
+$(VALUES_FILES) \
+	--wait --timeout 10m
+endif
 	@$(MAKE) _verify
 	@echo "==> ✓ Deployment complete!"
 
@@ -111,19 +118,21 @@ _build-deps:
 	@if ! helm repo list 2>/dev/null | grep -q '^bitnami[[:space:]]'; then \
 helm repo add bitnami https://charts.bitnami.com/bitnami; \
 fi
+	@if ! helm repo list 2>/dev/null | grep -q '^hashicorp[[:space:]]'; then \
+		helm repo add hashicorp https://helm.releases.hashicorp.com; \
+	fi
 	@helm repo update 2>/dev/null || echo "  ⚠ Repo update failed (offline/firewall) - using cached charts"
 	@cd charts/valkey && helm dependency build --skip-refresh 2>/dev/null || true
-	@helm dependency build --skip-refresh $(CHART_PATH) 2>/dev/null || true
-	@echo "  ✓ Dependencies ready"
+	@cd charts/vault && helm dependency build --skip-refresh 2>/dev/null || true
 
 .PHONY: _istio-inject-if-enabled
 _istio-inject-if-enabled:
 	@ISTIO_ENABLED=$$(helm template $(RELEASE_NAME) $(CHART_PATH) -n $(NAMESPACE) $(VALUES_FILES) 2>/dev/null | \
-grep -B2 "kind: Gateway" | grep -q "networking.istio.io" && echo "true" || echo "false"); \
-if [ "$$ISTIO_ENABLED" = "true" ]; then \
-kubectl label namespace $(NAMESPACE) istio-injection=enabled --overwrite 2>/dev/null || true; \
-echo "  ✓ Istio injection enabled"; \
-fi
+	grep -B2 "kind: Gateway" | grep -q "networking.istio.io" && echo "true" || echo "false"); \
+	if [ "$$ISTIO_ENABLED" = "true" ]; then \
+	kubectl label namespace $(NAMESPACE) istio-injection=enabled --overwrite 2>/dev/null || true; \
+	echo "  ✓ Istio injection enabled"; \
+	fi
 
 .PHONY: _verify
 _verify:
@@ -144,6 +153,8 @@ validate: ## Validate configuration before deployment
 	@test -f values/common-values.yaml || (echo "ERROR: values/common-values.yaml not found" && exit 1)
 	@test -f values/kafka.yaml || (echo "ERROR: values/kafka.yaml not found" && exit 1)
 	@test -f values/valkey.yaml || (echo "ERROR: values/valkey.yaml not found" && exit 1)
+	@test -f values/vault.yaml || (echo "ERROR: values/vault.yaml not found" && exit 1)
+	@test -f values/certificate-manager.yaml || (echo "ERROR: values/certificate-manager.yaml not found" && exit 1)
 	@test -f values/federator.yaml || (echo "ERROR: values/federator.yaml not found" && exit 1)
 ifeq ($(ENV),local)
 	@test -f values/overrides/local/local.yaml || (echo "ERROR: values/overrides/local/local.yaml not found" && exit 1)
@@ -160,12 +171,22 @@ endif
 .PHONY: check-cluster
 check-cluster: ## Check cluster connectivity
 	@echo "==> Cluster check..."
+ifeq ($(ENV),local)
+	@if kubectl cluster-info 2>/dev/null | head -3; then \
+		echo ""; \
+		echo "Context: $$(kubectl config current-context 2>/dev/null || echo '(none)')"; \
+		kubectl get namespace $(NAMESPACE) 2>/dev/null || echo "  ⚠ Namespace $(NAMESPACE) does not exist (will be created)"; \
+	else \
+		echo "  ⚠ No cluster found — will be created by _setup-cluster"; \
+	fi
+else
 	@kubectl cluster-info | head -3
 	@echo ""
 	@echo "Context: $$(kubectl config current-context)"
 	@kubectl get namespace $(NAMESPACE) 2>/dev/null || echo "  ⚠ Namespace $(NAMESPACE) does not exist"
 	@echo ""
 	@kubectl get nodes
+endif
 
 .PHONY: check-secrets
 check-secrets: ## Verify secrets file exists
@@ -208,8 +229,24 @@ debug: ## Show resolved values and rendered templates
 	@helm template $(RELEASE_NAME) $(CHART_PATH) -n $(NAMESPACE) $(VALUES_FILES) --debug
 
 # ============================================
-# Health & Logs
+# Status & Health
 # ============================================
+
+.PHONY: status
+status: ## Show status of all resources in the namespace
+	@echo "==> Status: $(RELEASE_NAME) in $(NAMESPACE)"
+	@echo ""
+	@echo "Pods:"
+	@kubectl get pods -n $(NAMESPACE) -o wide
+	@echo ""
+	@echo "Services:"
+	@kubectl get svc -n $(NAMESPACE)
+	@echo ""
+	@echo "PVCs:"
+	@kubectl get pvc -n $(NAMESPACE) 2>/dev/null || echo "  (none)"
+	@echo ""
+	@echo "Jobs:"
+	@kubectl get jobs -n $(NAMESPACE) 2>/dev/null || echo "  (none)"
 
 .PHONY: healthcheck
 healthcheck: ## Check all pods are running and error-free
@@ -248,6 +285,18 @@ healthcheck: ## Check all pods are running and error-free
 		kubectl exec -n $(NAMESPACE) $$CLIENT_POD -c federator-client -- sh -c "if command -v wget >/dev/null; then wget -qO- --timeout=2 http://localhost:8085/ 2>/dev/null | grep -q 'JobRunr' && echo '  ✓ JobRunr dashboard responding' || echo '  ⚠ JobRunr not responding'; else echo '  ⚠ wget not available'; fi" 2>/dev/null || echo "  ⚠ Cannot check JobRunr"; \
 	fi
 	@echo ""
+	@echo "Vault health:"
+	@VAULT_POD=$$(kubectl get pod -l app.kubernetes.io/name=vault,component=server -n $(NAMESPACE) -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
+	if [ -z "$$VAULT_POD" ]; then echo "  ⚠ vault pod not found"; else \
+		kubectl exec -n $(NAMESPACE) $$VAULT_POD -- vault status 2>/dev/null && echo "  ✓ Vault responding" || echo "  ⚠ Vault not responding (may need init)"; \
+	fi
+	@echo ""
+	@echo "Certificate Manager health:"
+	@CM_POD=$$(kubectl get pod -l app=certificate-manager -n $(NAMESPACE) -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
+	if [ -z "$$CM_POD" ]; then echo "  ⚠ certificate-manager pod not found"; else \
+		kubectl exec -n $(NAMESPACE) $$CM_POD -- sh -c "pgrep -f 'java.*certificate-manager' > /dev/null && echo '  ✓ Certificate manager process running' || echo '  ⚠ Certificate manager process not found'" 2>/dev/null || echo "  ⚠ Cannot check certificate manager"; \
+	fi
+	@echo ""
 	@echo "Error check (all pods, last 100 lines):"
 	@ERROR_FOUND=0; \
 	for pod in $$(kubectl get pods -n $(NAMESPACE) -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do \
@@ -263,19 +312,41 @@ healthcheck: ## Check all pods are running and error-free
 	fi
 
 # ============================================
+# Logs
+# ============================================
+
+.PHONY: logs-server
+logs-server: ## View federator-server logs
+	@kubectl logs -l app=federator-server -n $(NAMESPACE) --tail=100 -c federator-server -f
+
+.PHONY: logs-client
+logs-client: ## View federator-client logs
+	@kubectl logs -l app=federator-client -n $(NAMESPACE) --tail=100 -c federator-client -f
+
+.PHONY: logs
+logs: ## Show last 50 lines from all pods
+	@for pod in $$(kubectl get pods -n $(NAMESPACE) -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do \
+		echo "━━━ $$pod ━━━"; \
+		kubectl logs $$pod -n $(NAMESPACE) --tail=50 --all-containers 2>/dev/null || echo "  (no logs)"; \
+		echo ""; \
+	done
+
+# ============================================
 # Port Forwarding
 # ============================================
 
 .PHONY: port-forward-all
-port-forward-all: ## Forward Kafka UI (8088), Valkey UI (5540), JobRunr (8085)
+port-forward-all: ## Forward Kafka UI (8088), Valkey UI (5540), JobRunr (8085), Vault UI (8200)
 	@echo "Starting port forwards..."
 	@kubectl port-forward -n $(NAMESPACE) svc/kafka-ui 8088:8080 > /dev/null 2>&1 &
 	@kubectl port-forward -n $(NAMESPACE) svc/valkey-ui 5540:5540 > /dev/null 2>&1 &
 	@kubectl port-forward -n $(NAMESPACE) svc/$(RELEASE_NAME)-federator-client 8085:8085 > /dev/null 2>&1 &
+	@kubectl port-forward -n $(NAMESPACE) svc/$(RELEASE_NAME)-vault-ui 8200:8200 > /dev/null 2>&1 &
 	@sleep 2
 	@echo "  ✓ JobRunr:    http://localhost:8085"
 	@echo "  ✓ Kafka UI:   http://localhost:8088"
 	@echo "  ✓ Valkey UI:  http://localhost:5540"
+	@echo "  ✓ Vault UI:   http://localhost:8200"
 	@echo ""
 	@echo "Stop: make stop-port-forwards"
 
@@ -288,15 +359,15 @@ stop-port-forwards: ## Stop all port forwards
 .PHONY: port-forward-status
 port-forward-status: ## Show active port forwards
 	@if ps aux | grep -v grep | grep -q "kubectl port-forward"; then \
-echo "Active:"; \
-ps aux | grep -v grep | grep "kubectl port-forward" | while read -r line; do \
-svc=$$(echo "$$line" | grep -oP 'svc/[^ ]+'); \
-ports=$$(echo "$$line" | grep -oP '\d+:\d+' | head -1); \
-echo "  $$svc → $$ports"; \
-done; \
-else \
-echo "No port forwards running. Start: make port-forward-all"; \
-fi
+	echo "Active:"; \
+	ps aux | grep -v grep | grep "kubectl port-forward" | while read -r line; do \
+	svc=$$(echo "$$line" | grep -oP 'svc/[^ ]+'); \
+	ports=$$(echo "$$line" | grep -oP '\d+:\d+' | head -1); \
+	echo "  $$svc → $$ports"; \
+	done; \
+	else \
+	echo "No port forwards running. Start: make port-forward-all"; \
+	fi
 
 # ============================================
 # Istio
@@ -329,6 +400,35 @@ istio-status: ## Check Istio status
 .PHONY: generate-certs
 generate-certs: ## Generate local mTLS certificates (ORG=org1)
 	@./scripts/generate-certs.sh $(ORG)
+
+# ============================================
+# Vault Operations
+# ============================================
+
+.PHONY: init-vault
+init-vault: ## Initialize Vault and create cert-manager token secret (local only)
+ifeq ($(ENV),local)
+	@set -e; \
+	echo "==> Initializing Vault ($(RELEASE_NAME)-vault-0)..."; \
+	VAULT_INIT=$$(kubectl exec -n $(NAMESPACE) $(RELEASE_NAME)-vault-0 -- vault operator init -key-shares=1 -key-threshold=1 -format=json); \
+	UNSEAL_KEY=$$(echo "$$VAULT_INIT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['unseal_keys_b64'][0])"); \
+	ROOT_TOKEN=$$(echo "$$VAULT_INIT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['root_token'])"); \
+	echo "  Unsealing..."; \
+	kubectl exec -n $(NAMESPACE) $(RELEASE_NAME)-vault-0 -- vault operator unseal "$$UNSEAL_KEY"; \
+	echo "  Enabling KV mounts..."; \
+	kubectl exec -n $(NAMESPACE) $(RELEASE_NAME)-vault-0 -- sh -c "VAULT_TOKEN=$$ROOT_TOKEN vault secrets enable -version=2 -path=secret kv 2>/dev/null || true"; \
+	kubectl exec -n $(NAMESPACE) $(RELEASE_NAME)-vault-0 -- sh -c "VAULT_TOKEN=$$ROOT_TOKEN vault secrets enable -version=2 -path=node-net kv 2>/dev/null || true"; \
+	echo "  Creating cert-manager vault-token secret..."; \
+	kubectl create secret generic $(RELEASE_NAME)-certificate-manager-vault-token \
+	  --from-literal=vault-token="$$ROOT_TOKEN" \
+	  -n $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -; \
+	echo "==> Vault initialized"; \
+	echo "    Unseal key : $$UNSEAL_KEY"; \
+	echo "    Root token : $$ROOT_TOKEN"; \
+	echo "    WARNING: save these credentials safely!"
+else
+	@echo "ERROR: init-vault only works with ENV=local" && exit 1
+endif
 
 # ============================================
 # Cleanup

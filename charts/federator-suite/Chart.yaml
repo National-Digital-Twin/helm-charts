@@ -1,8 +1,8 @@
 apiVersion: v2
 name: federator-suite
-description: Helm chart for Federator application suite (client, server, kafka, valkey, UIs)
+description: Helm chart for Federator application suite (client, server, kafka, valkey, vault, certificate-manager, UIs)
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "0.4.1"
 home: https://github.com/national-digital-twin/helm-charts
 maintainers:
@@ -18,4 +18,8 @@ dependencies:
     version: "0.1.0"
     repository: "file://charts/valkey"
     condition: valkey.enabled
+  - name: vault
+    version: "0.1.0"
+    repository: "file://charts/vault"
+    condition: vault.enabled
 

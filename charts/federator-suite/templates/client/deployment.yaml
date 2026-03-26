@@ -101,6 +101,9 @@ spec:
           readOnly: true
         - name: kafka-auth-volume
           mountPath: /app/config/kafka-auth/
+        - name: cert-storage
+          mountPath: /certs
+          readOnly: true
         securityContext:
           {{- toYaml .Values.federatorClient.securityContext | nindent 10 }}
       volumes:
@@ -119,6 +122,10 @@ spec:
       - name: kafka-auth-volume
         secret:
           secretName: kafka-auth-config
+      - name: cert-storage
+        persistentVolumeClaim:
+          claimName: {{ include "federator-suite.certStorage.claimName" . }}
+          readOnly: true
       {{- with .Values.federatorClient.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

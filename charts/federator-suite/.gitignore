@@ -1,7 +1,7 @@
 # Secrets - DO NOT COMMIT
-values-secrets.yaml
-values/overrides/*/secrets.yaml
-values/overrides/*/secrets/*.yaml
+# values-secrets.yaml
+# values/overrides/*/secrets.yaml
+# values/overrides/*/secrets/*.yaml
 
 # Helm packaging
 *.tgz

@@ -191,7 +191,7 @@ Valkey port
 {{- if .Values.valkey.external }}
 {{- .Values.valkey.externalConfig.port | default 6379 }}
 {{- else }}
-{{- .Values.valkey.valkey.master.service.port | default 6379 }}
+{{- .Values.valkey.valkey.primary.service.port | default 6379 }}
 {{- end }}
 {{- end }}
 
@@ -242,6 +242,33 @@ Validate configuration - basic checks
 {{- end }}
 {{- if and .Values.valkey.external (not .Values.valkey.externalConfig.host) }}
 {{- fail "ERROR: valkey.external is true but valkey.externalConfig.host is not set" }}
+{{- end }}
+{{- /* Vault validation (always enabled) — cloud provider derived from global.clusterType */ -}}
+{{- if not .Values.vault.devMode }}
+{{- $cp := include "federator-suite.cloudProvider" . }}
+{{- if not (or (eq $cp "aws") (eq $cp "azure") (eq $cp "gcp")) }}
+{{- fail (printf "ERROR: cloud provider must be aws, azure, or gcp — got: %s (from global.clusterType or vault.cloudProvider)" $cp) }}
+{{- end }}
+{{- if and .Values.vault.setup.enabled (eq .Values.vault.secretsManager.secretName "PLACEHOLDER_SECRETS_MANAGER_NAME") }}
+{{- fail "ERROR: vault.secretsManager.secretName is still a placeholder — set from Terraform output" }}
+{{- end }}
+{{- if eq $cp "aws" }}
+{{- if eq (.Values.vault.seal.aws.kmsKeyId | default "PLACEHOLDER_KMS_KEY_ID") "PLACEHOLDER_KMS_KEY_ID" }}
+{{- fail "ERROR: vault.seal.aws.kmsKeyId is still a placeholder — set from Terraform output" }}
+{{- end }}
+{{- else if eq $cp "azure" }}
+{{- if eq (.Values.vault.seal.azure.tenantId | default "PLACEHOLDER_TENANT_ID") "PLACEHOLDER_TENANT_ID" }}
+{{- fail "ERROR: vault.seal.azure.tenantId is still a placeholder — set from Terraform output" }}
+{{- end }}
+{{- else if eq $cp "gcp" }}
+{{- if eq (.Values.vault.seal.gcp.project | default "PLACEHOLDER_PROJECT") "PLACEHOLDER_PROJECT" }}
+{{- fail "ERROR: vault.seal.gcp.project is still a placeholder — set from Terraform output" }}
+{{- end }}
+{{- end }}
+{{- end }}{{/* end vault devMode skip */}}
+{{- /* Certificate Manager validation (always enabled) */ -}}
+{{- if eq .Values.certificateManager.image.tag "PLACEHOLDER_IMAGE_TAG" }}
+{{- fail "ERROR: certificateManager.image.tag is still a placeholder — set to the latest image tag" }}
 {{- end }}
 {{- /* Certificate validation disabled for templating - secrets should be provided at deployment time */ -}}
 {{- /* Single-switch Istio model: serviceMesh.istio.enabled controls all Istio resources */ -}}
@@ -326,8 +353,8 @@ kafka.consumerGroup={{ .Values.federatorClient.config.consumerGroup | default (p
 {{- else if .Values.valkey.external.enabled }}
 {{- $redisTlsEnabled = true }}
 {{- end }}
-{{- else if and .Values.valkey.enabled .Values.valkey.valkey.master.tls }}
-{{- $redisTlsEnabled = .Values.valkey.valkey.master.tls.enabled }}
+{{- else if and .Values.valkey.enabled .Values.valkey.valkey.primary.tls }}
+{{- $redisTlsEnabled = .Values.valkey.valkey.primary.tls.enabled }}
 {{- end }}
 redis.host={{ include "federator-suite.valkey.host" . }}
 redis.port={{ include "federator-suite.valkey.port" . }}
@@ -451,8 +478,8 @@ management.node.base.url={{ .Values.global.managementNode.baseUrl }}
 {{- else if .Values.valkey.external.enabled }}
 {{- $redisTlsEnabled = true }}
 {{- end }}
-{{- else if and .Values.valkey.enabled .Values.valkey.valkey.master.tls }}
-{{- $redisTlsEnabled = .Values.valkey.valkey.master.tls.enabled }}
+{{- else if and .Values.valkey.enabled .Values.valkey.valkey.primary.tls }}
+{{- $redisTlsEnabled = .Values.valkey.valkey.primary.tls.enabled }}
 {{- end }}
 redis.host={{ include "federator-suite.valkey.host" . }}
 redis.port={{ include "federator-suite.valkey.port" . }}
@@ -479,4 +506,92 @@ azure.storage.connection.string={{ .Values.federatorServer.config.storage.azure.
 files.storage.provider=GCP
 files.gcp.bucket={{ .Values.federatorServer.config.storage.gcp.bucket }}
 {{- end }}
+{{- end }}
+
+{{/* ======================================================================
+     Vault Helpers
+     ====================================================================== */}}
+
+{{/*
+Cloud provider — derived from global.clusterType or explicit vault.cloudProvider.
+Mapping: eks → aws, aks → azure, gke → gcp.
+Explicit vault.cloudProvider always wins if set.
+Returns empty string when vault.devMode is true (local/KIND deployment).
+*/}}
+{{- define "federator-suite.cloudProvider" -}}
+{{- if .Values.vault.devMode -}}
+{{- /* devMode: no cloud provider needed */ -}}
+{{- else if .Values.vault.cloudProvider }}
+{{- .Values.vault.cloudProvider }}
+{{- else }}
+{{- $ct := .Values.global.clusterType | default "" }}
+{{- if eq $ct "eks" }}aws
+{{- else if eq $ct "aks" }}azure
+{{- else if eq $ct "gke" }}gcp
+{{- else }}
+{{- fail (printf "ERROR: Cannot determine cloud provider from global.clusterType '%s' — expected: eks, aks, or gke. Set vault.cloudProvider explicitly or enable vault.devMode for local deployment." $ct) }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Vault internal address
+Returns the HTTP address of the Vault leader within the cluster.
+*/}}
+{{- define "federator-suite.vault.addr" -}}
+{{- $replicas := .Values.vault.ha.replicas | default 1 | int }}
+{{- if gt $replicas 1 }}
+{{- printf "http://%s-vault-active.%s.svc.cluster.local:8200" .Release.Name .Release.Namespace }}
+{{- else }}
+{{- printf "http://%s-vault.%s.svc.cluster.local:8200" .Release.Name .Release.Namespace }}
+{{- end }}
+{{- end }}
+
+{{/*
+Vault any-pod address (plain ClusterIP — routes to all pods, works before init)
+Use this for pre-initialisation operations where vault-active has no endpoints.
+*/}}
+{{- define "federator-suite.vault.any.addr" -}}
+{{- printf "http://%s-vault.%s.svc.cluster.local:8200" .Release.Name .Release.Namespace }}
+{{- end }}
+
+{{/*
+Vault service account name
+*/}}
+{{- define "federator-suite.vault.serviceAccountName" -}}
+{{- if .Values.vault.serviceAccount.name }}
+{{- .Values.vault.serviceAccount.name }}
+{{- else }}
+{{- printf "%s-vault-sa" .Release.Name }}
+{{- end }}
+{{- end }}
+
+{{/* ======================================================================
+     Certificate Manager Helpers
+     ====================================================================== */}}
+
+{{/*
+Certificate manager full name
+*/}}
+{{- define "federator-suite.certificateManager.fullname" -}}
+{{- printf "%s-certificate-manager" .Release.Name }}
+{{- end }}
+
+{{/*
+Certificate manager service account name
+*/}}
+{{- define "federator-suite.certificateManager.serviceAccountName" -}}
+{{- if .Values.certificateManager.serviceAccount.name }}
+{{- .Values.certificateManager.serviceAccount.name }}
+{{- else }}
+{{- printf "%s-certificate-manager" .Release.Name }}
+{{- end }}
+{{- end }}
+
+{{/*
+Shared cert storage PVC claim name
+Used by certificate-manager (read-write) and server/client deployments (read-only)
+*/}}
+{{- define "federator-suite.certStorage.claimName" -}}
+{{- printf "%s-cert-storage" .Release.Name }}
 {{- end }}

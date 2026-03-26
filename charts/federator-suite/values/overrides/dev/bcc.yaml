@@ -12,7 +12,7 @@ global:
 # Kafka Configuration
 kafka:
   external: true
-  enabled: true  # In-cluster Kafka sub-chart disabled (using external MSK)
+  enabled: false  # In-cluster Kafka sub-chart disabled (using external MSK)
   # External Kafka configuration (comment out below if using in-cluster Kafka)
   externalConfig:
     bootstrapServers: "b-1.devianodemsk.6fou3l.c3.kafka.eu-west-2.amazonaws.com:9096,b-2.devianodemsk.6fou3l.c3.kafka.eu-west-2.amazonaws.com:9096"
@@ -165,5 +165,55 @@ serviceMesh:
 # Management Node - AWS Dev
 managementNode:
   baseUrl: "https://ia-management-node.dev.ndtp.co.uk"
+
+# Vault + Certificate Manager (AWS EKS)
+vault:
+  seal:
+    aws:
+      region: eu-west-2
+      kmsKeyId: "a95fad0c-6728-43ad-a0f5-a6076ca21acb"
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::537124944113:role/dev-ia-node-fed-vault-unseal-role"
+  secretsManager:
+    secretName: "dev-ia-node-fed-vault-secrets"
+  vault:
+    server:
+      ha:
+        raft:
+          config: |
+            ui = true
+
+            listener "tcp" {
+              tls_disable = 1
+              address     = "[::]:8200"
+              cluster_address = "[::]:8201"
+            }
+
+            storage "raft" {
+              path = "/vault/data"
+            }
+
+            seal "awskms" {
+              region     = "eu-west-2"
+              kms_key_id = "a95fad0c-6728-43ad-a0f5-a6076ca21acb"
+            }
+
+            service_registration "kubernetes" {}
+
+certificateManager:
+  image:
+    repository: "537124944113.dkr.ecr.eu-west-2.amazonaws.com/ndtp/federator-certificate-manager"
+    tag: "1.0.0"
+  config:
+    managementNode:
+      baseUrl: "https://ia-management-node.dev.ndtp.co.uk"
+    oauth2:
+      enabled: true
+      tokenUri: "https://ia-idp.dev.ndtp.co.uk/realms/mng-node/protocol/openid-connect/token"
+      clientId: "FEDERATOR_BCC"
+    cert:
+      subjectOrg: "bcc"
+      subjectCountry: "GB"
 
 # BCC-specific secrets (defined in secrets/bcc-secrets.yaml)

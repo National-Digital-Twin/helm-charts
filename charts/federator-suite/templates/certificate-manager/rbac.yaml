@@ -1,0 +1,38 @@
+{{- if .Values.certificateManager.vaultToken.useSecret }}
+---
+# Role: allows the cert-manager service account to check whether the vault-token
+# Secret exists. Used by the init container (wait-for-vault-token) which runs
+# `kubectl get secret` before the main container starts. Without this, the init
+# container can't verify the secret and would fail with a 403.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "federator-suite.certificateManager.fullname" . }}-secret-reader
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{ include "federator-suite.labels" . | nindent 4 }}
+    app.kubernetes.io/component: certificate-manager
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames:
+  - {{ include "federator-suite.certificateManager.fullname" . }}-vault-token
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "federator-suite.certificateManager.fullname" . }}-secret-reader
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{ include "federator-suite.labels" . | nindent 4 }}
+    app.kubernetes.io/component: certificate-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "federator-suite.certificateManager.fullname" . }}-secret-reader
+subjects:
+- kind: ServiceAccount
+  name: {{ include "federator-suite.certificateManager.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
