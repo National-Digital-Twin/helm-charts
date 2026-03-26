@@ -42,7 +42,7 @@ federatorClient:
 secrets:
   create: true
   certificates:
-    source: external  # or "cert-manager"
+    source: external
     
     # Option A: External/Pre-generated Certificates (default)
     external:
@@ -62,49 +62,6 @@ secrets:
         federationCert: ""
         clientP12: ""
         serverP12: ""
-    
-    # Option B: cert-manager Auto-generation
-    # Enable by setting secrets.certificates.source: "cert-manager" in overrides
-    certManager:
-      enabled: false  # Override to true in environment-specific overrides
-      
-      # Issuer configuration
-      issuer:
-        name: "federator-ca-issuer"
-        kind: "Issuer"  # or "ClusterIssuer"
-        create: true
-        selfSigned: true
-      
-      # Certificate settings
-      duration: 8760h  # 1 year
-      renewBefore: 720h  # Renew 30 days before expiry
-      
-      # Common name pattern
-      commonName: "federator-{{ .Values.global.orgName }}"
-      
-      # DNS names for the certificate
-      dnsNames:
-        - "federator-server"
-        - "federator-server.{{ .Release.Namespace }}"
-        - "federator-server.{{ .Release.Namespace }}.svc.cluster.local"
-      
-      # Passwords for generated keystores
-      keystorePassword: "changeit"
-      truststorePassword: "R7jd0Khx8pkd8!H"
-      p12Password: "changeit"
-      
-      # Init container for PEM -> JKS/P12 conversion
-      converter:
-        image:
-          repository: eclipse-temurin
-          tag: "21-jdk"
-        resources:
-          requests:
-            cpu: 50m
-            memory: 64Mi
-          limits:
-            cpu: 100m
-            memory: 128Mi
   
   kafkaAuth:
     securityProtocol: "<set-in-overrides>"

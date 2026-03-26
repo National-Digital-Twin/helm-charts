@@ -52,6 +52,8 @@ federator-suite/
 │   ├── client/                 # Federator client resources
 │   ├── configmaps/             # Application config
 │   ├── secrets/                # Kubernetes Secret templates
+│   ├── vault/                  # Vault sidecar setup ConfigMap + supporting RBAC/SA
+│   ├── certificate-manager/    # Certificate manager deployment, PVC, secrets
 │   ├── istio/                  # Optional Istio resources
 │   ├── kafka-ui/               # Kafka UI resources
 │   └── valkey-ui/              # Valkey UI resources
@@ -59,6 +61,8 @@ federator-suite/
 │   ├── common-values.yaml      # Global defaults
 │   ├── kafka.yaml              # Kafka defaults + external toggle
 │   ├── valkey.yaml             # Valkey defaults + external toggle
+│   ├── vault.yaml              # Vault defaults (HA Raft, auto-unseal, dev mode)
+│   ├── certificate-manager.yaml # Certificate manager defaults
 │   ├── federator.yaml          # Server/client defaults
 │   ├── kafka-ui.yaml           # Kafka UI defaults
 │   ├── valkey-ui.yaml          # Valkey UI defaults
@@ -67,7 +71,7 @@ federator-suite/
 │       ├── local/              # KIND overlays (local.yaml, bcc.yaml, secrets.yaml, …)
 │       ├── dev/                # Dev overlays  (bcc.yaml, env.yaml, secrets/…)
 │       └── prod/               # Prod overlays (secrets/…)
-└── charts/                     # Vendored dependency charts
+└── charts/                     # Vendored dependency charts (valkey, vault)
 ```
 
 ## Configuration Switches
@@ -78,6 +82,8 @@ federator-suite/
 | `kafka.enabled` | `false` | Controls Kafka subchart. `true` when in-cluster, `false` when external |
 | `valkey.external` | `false` | `false` = Valkey in-cluster · `true` = External Redis/Memorystore |
 | `valkey.enabled` | `true` | Controls Valkey subchart. Set `false` when external |
+| `vault.cloudProvider` | (auto) | Cloud provider for auto-unseal. Auto-derived from `global.clusterType` (`eks`→`aws`, `aks`→`azure`, `gke`→`gcp`). Set explicitly to override. |
+| `vault.devMode` | `false` | Use in-memory Vault without KMS auto-unseal (for KIND/local development) |
 | `serviceMesh.istio.enabled` | `false` | Deploys Istio resources (Gateway, VirtualService, DestinationRule, PeerAuthentication, AuthorizationPolicy) |
 | `kafkaUi.enabled` | `false` | Deploy Kafka UI |
 | `valkeyUi.enabled` | `false` | Deploy Valkey UI |
@@ -114,16 +120,21 @@ Dependencies (Bitnami Kafka repo + local Valkey subchart) are built automaticall
 | `make lint ENV=dev ORG=bcc` | Helm lint |
 | `make template ENV=dev ORG=bcc` | Render full manifests to stdout |
 | `make debug ENV=dev ORG=bcc` | Show resolved values + rendered templates |
-| **Health** | |
-| `make healthcheck ENV=dev ORG=bcc` | Pod status, process check, log errors |
+| **Status & Health** | |
+| `make status ENV=dev ORG=bcc` | Show all pods, services, PVCs, jobs |
+| `make healthcheck ENV=dev ORG=bcc` | Pod readiness + process checks + error scan |
+| **Logs** | |
+| `make logs-server` | Tail federator-server logs |
+| `make logs-client` | Tail federator-client logs |
+| `make logs` | Last 50 lines from all pods |
 | **Port Forwarding** | |
-| `make port-forward-all` | Forward Kafka UI (8088), Valkey UI (5540), JobRunr (8085) |
-| `make port-forward-status` | Show active port forwards |
+| `make port-forward-all` | Forward Kafka UI (8088), Valkey UI (5540), JobRunr (8085), Vault UI (8200) |
 | `make stop-port-forwards` | Kill all port forwards |
+| `make port-forward-status` | Show active port forwards |
 | **Istio** | |
 | `make istio-enable ENV=dev ORG=bcc` | Enable Istio injection on namespace |
 | `make istio-disable ENV=dev ORG=bcc` | Disable Istio injection on namespace |
-| `make istio-status ENV=dev ORG=bcc` | Check Istio sidecars + resources |
+| `make istio-status ENV=dev ORG=bcc` | Check Istio injection, sidecars, resources |
 | **Certificates** | |
 | `make generate-certs ORG=org1` | Generate local mTLS certificates |
 | **Cleanup** | |

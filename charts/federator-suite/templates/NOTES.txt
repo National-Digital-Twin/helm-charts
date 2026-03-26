@@ -25,6 +25,8 @@ Istio:    {{ if $istioEnabled }}Enabled{{ else }}Disabled{{ end }}
 Components Deployed:
   ✓ Federator Server
   ✓ Federator Client
+  ✓ HashiCorp Vault (HA Raft, KV v2)
+  ✓ Certificate Manager (headless scheduler)
 {{- if .Values.kafkaUi.enabled }}
   ✓ Kafka UI
 {{- end }}
@@ -73,6 +75,7 @@ Port Forwarding:
     - Client JobRunr Dashboard:  http://localhost:8085
     - Kafka UI:                  http://localhost:8088
     - Valkey UI:                 http://localhost:5540
+    - Vault UI:                  http://localhost:8200
 
   Check status:
     make port-forward-status
@@ -96,8 +99,9 @@ Health Check:
 {{- end }}
 
 View Logs:
-  make logs-server    # Server logs
-  make logs-client    # Client logs
+  make logs-server       # Server logs
+  make logs-client       # Client logs
+  make logs              # All pods (last 50 lines)
 
 --------------------------------------------------------------------------------
 CONFIGURATION
@@ -126,6 +130,22 @@ Security Protocol:
   {{- else }}
   SASL_PLAINTEXT
   {{- end }}
+
+Vault:
+  Address: {{ include "federator-suite.vault.addr" . }}
+  HA Mode: {{ .Values.vault.ha.replicas }} replicas (Raft)
+  KV v2:   secret/
+  UI:      Enabled (port-forward to 8200)
+  Cloud:   {{ include "federator-suite.cloudProvider" . | upper }}
+  {{- if .Values.vault.setup.enabled }}
+  Setup:    Enabled (vault-setup sidecar on vault-0)
+  {{- end }}
+
+Certificate Manager:
+  Image:    {{ .Values.certificateManager.image.repository }}:{{ .Values.certificateManager.image.tag }}
+  Schedule: {{ .Values.certificateManager.config.cert.scheduleCron | default "0 0 2 * * ?" }}
+  Output:   {{ .Values.certificateManager.config.cert.outputDir | default "/certs" }}
+  PVC:      {{ include "federator-suite.certStorage.claimName" . }}
 
 --------------------------------------------------------------------------------
 NEXT STEPS
@@ -161,6 +181,8 @@ helm upgrade {{ .Release.Name }} . -n {{ .Release.Namespace }} \\
   -f values/common-values.yaml \\
   -f values/kafka.yaml \\
   -f values/valkey.yaml \\
+  -f values/vault.yaml \\
+  -f values/certificate-manager.yaml \\
   -f values/federator.yaml \\
   -f values/kafka-ui.yaml \\
   -f values/valkey-ui.yaml \\
@@ -187,6 +209,11 @@ helm history {{ .Release.Name }} -n {{ .Release.Namespace }}
 
 # Rollback to previous version
 helm rollback {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+# Vault operations
+make status                      # All pods, services, PVCs, jobs
+make healthcheck                 # Pod readiness + error scan
+make port-forward-all            # Forward all UIs (8085, 8088, 5540, 8200)
 
 ================================================================================
   For more information, see README.md in this chart directory

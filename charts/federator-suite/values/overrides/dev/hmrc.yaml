@@ -13,6 +13,22 @@ global:
 kafka:
   external: false
   enabled: true  # In-cluster Kafka sub-chart enabled
+  controller:
+    resources:
+      requests:
+        cpu: 75m
+        memory: 192Mi
+      limits:
+        cpu: 300m
+        memory: 384Mi
+  broker:
+    resources:
+      requests:
+        cpu: 75m
+        memory: 256Mi
+      limits:
+        cpu: 400m
+        memory: 768Mi
   extraConfig: |-
     auto.create.topics.enable=true
     offsets.topic.replication.factor=1
@@ -29,6 +45,41 @@ kafka:
 valkey:
   external: false
   enabled: true  # Enable in-cluster Bitnami Valkey
+  valkey:
+    primary:
+      resources:
+        requests:
+          cpu: 25m
+          memory: 64Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
+      podAntiAffinityPreset: hard
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: federator-suite
+                  app.kubernetes.io/name: valkey
+              topologyKey: kubernetes.io/hostname
+    replica:
+      resources:
+        requests:
+          cpu: 25m
+          memory: 64Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
+      podAntiAffinityPreset: hard
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: federator-suite
+                  app.kubernetes.io/name: valkey
+              topologyKey: kubernetes.io/hostname
 
 # Federator Server - GCP Dev
 federatorServer:
@@ -51,11 +102,22 @@ federatorServer:
   
   resources:
     requests:
-      cpu: 500m
-      memory: 1Gi
+      cpu: 200m
+      memory: 384Mi
     limits:
-      cpu: 1000m
-      memory: 2Gi
+      cpu: 700m
+      memory: 1Gi
+
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - certificate-manager
+          topologyKey: kubernetes.io/hostname
   
   service:
     type: ClusterIP
@@ -92,11 +154,22 @@ federatorClient:
   
   resources:
     requests:
-      cpu: 500m
-      memory: 1Gi
+      cpu: 150m
+      memory: 384Mi
     limits:
-      cpu: 1000m
-      memory: 2Gi
+      cpu: 700m
+      memory: 1Gi
+
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - certificate-manager
+          topologyKey: kubernetes.io/hostname
   
   service:
     type: ClusterIP
@@ -120,7 +193,7 @@ federatorClient:
 
 # Enable UIs for dev environment
 kafkaUi:
-  enabled: true
+  enabled: false
   image:
     repository: provectuslabs/kafka-ui
     tag: latest
@@ -131,7 +204,7 @@ kafkaUi:
       cloud.google.com/load-balancer-type: "External"
 
 valkeyUi:
-  enabled: true
+  enabled: false
   image:
     repository: redis/redisinsight
     tag: latest
@@ -175,5 +248,103 @@ serviceMesh:
 # Management Node - GCP Dev
 managementNode:
   baseUrl: "https://ia-management-node.dev.ndtp.co.uk"
+
+# Vault + Certificate Manager (GCP GKE)
+vault:
+  seal:
+    gcp:
+      project: "development-486319"
+      region: "europe-west2"
+      keyRing: "dev-fed-vault-keyring"
+      cryptoKey: "dev-fed-vault-unseal-key"
+  serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: "dev-fed-vault@development-486319.iam.gserviceaccount.com"
+  secretsManager:
+    secretName: "projects/598715601744/secrets/dev-fed-vault-secrets"
+  vault:
+    server:
+      resources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+        limits:
+          cpu: 400m
+          memory: 512Mi
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: federator-suite
+                  app.kubernetes.io/name: vault
+                  component: server
+              topologyKey: kubernetes.io/hostname
+      extraContainers:
+        - name: vault-setup
+          image: "google/cloud-sdk:503.0.0-slim"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "/scripts/vault-setup.sh"]
+          env:
+            - name: HOME
+              value: "/tmp"
+          volumeMounts:
+            - name: vault-setup-script
+              mountPath: /scripts
+              readOnly: true
+      # Annotate HashiCorp sub-chart SA (federator-suite-vault) with Workload Identity
+      serviceAccount:
+        annotations:
+          iam.gke.io/gcp-service-account: "dev-fed-vault@development-486319.iam.gserviceaccount.com"
+      ha:
+        raft:
+          config: |
+            ui = true
+
+            listener "tcp" {
+              tls_disable = 1
+              address     = "[::]:8200"
+              cluster_address = "[::]:8201"
+            }
+
+            storage "raft" {
+              path = "/vault/data"
+            }
+
+            seal "gcpckms" {
+              project    = "development-486319"
+              region     = "europe-west2"
+              key_ring   = "dev-fed-vault-keyring"
+              crypto_key = "dev-fed-vault-unseal-key"
+            }
+
+            service_registration "kubernetes" {}
+
+certificateManager:
+  image:
+    repository: "europe-west2-docker.pkg.dev/development-486319/ndtp-ia-federator-certificate-manager/federator-certificate-manager"
+    tag: "1.0.0"
+  resources:
+    requests:
+      cpu: 75m
+      memory: 192Mi
+    limits:
+      cpu: 300m
+      memory: 384Mi
+  config:
+    managementNode:
+      baseUrl: "https://ia-management-node.dev.ndtp.co.uk"
+    oauth2:
+      enabled: true
+      tokenUri: "https://ia-idp.dev.ndtp.co.uk/realms/mng-node/protocol/openid-connect/token"
+      clientId: "FEDERATOR_HMRC"
+    cert:
+      subjectOrg: "hmrc"
+      subjectCountry: "GB"
+  persistence:
+    # GKE only has GCE PD storage classes (standard-rwo, premium-rwo) which are RWO only.
+    # ReadWriteMany requires Filestore/NFS. Use RWO — scheduler colocates all 3 pods that share
+    # this PVC (certificate-manager, federator-client, federator-server) on the same node.
+    accessMode: ReadWriteOnce
 
 # HMRC-specific secrets (defined in secrets/hmrc-secrets.yaml)

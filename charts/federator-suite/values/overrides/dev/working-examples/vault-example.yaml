@@ -1,0 +1,70 @@
+# ============================================================================
+# Example: Dev Environment Vault + Certificate Manager Override (AWS)
+# ============================================================================
+# EXAMPLE ONLY — all values below are PLACEHOLDERS.
+# Copy this file and fill in actual values from Terraform outputs:
+
+# ============================================================================
+
+vault:
+  # cloudProvider auto-derived from global.clusterType (eks→aws)
+  # cloudProvider: aws   ← only needed if clusterType is not set in env override
+  seal:
+    aws:
+      region: eu-west-2
+      # From: tofu output fed_vault_kms_key_id
+      kmsKeyId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  serviceAccount:
+    annotations:
+      # From: tofu output fed_vault_iam_role_arn
+      eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT_ID:role/dev-ia-node-fed-vault-unseal-role"
+  secretsManager:
+    # Pattern: <env>-ia-node-fed-vault-secrets
+    secretName: "dev-ia-node-fed-vault-secrets"
+  # Override Raft config with real KMS key
+  vault:
+    server:
+      ha:
+        raft:
+          config: |
+            ui = true
+
+            listener "tcp" {
+              tls_disable = 1
+              address     = "[::]:8200"
+              cluster_address = "[::]:8201"
+            }
+
+            storage "raft" {
+              path = "/vault/data"
+            }
+
+            seal "awskms" {
+              region     = "eu-west-2"
+              kms_key_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            }
+
+            service_registration "kubernetes" {}
+
+# Certificate Manager — set image + env-specific config
+# All values below are EXAMPLES — replace with your actual environment values.
+certificateManager:
+  image:
+    # EXAMPLE: replace with your actual registry/tag
+    repository: "PLACEHOLDER_REGISTRY/federator-certificate-manager"
+    tag: "PLACEHOLDER_TAG"
+  config:
+    managementNode:
+      # EXAMPLE: replace with your actual Management Node URL
+      baseUrl: "https://PLACEHOLDER_MANAGEMENT_NODE_HOST:443"
+    oauth2:
+      enabled: true
+      # EXAMPLE: replace with your actual Keycloak/IDP URLs
+      tokenUri: "https://PLACEHOLDER_KEYCLOAK_HOST/realms/PLACEHOLDER_REALM/protocol/openid-connect/token"
+      clientId: "PLACEHOLDER_CLIENT_ID"
+      clientSecretRef:
+        name: "oauth2-client-secret"
+        key: "client-secret"
+    cert:
+      subjectOrg: "PLACEHOLDER_ORG"
+      subjectCountry: "GB"
