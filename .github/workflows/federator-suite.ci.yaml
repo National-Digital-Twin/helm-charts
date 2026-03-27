@@ -1,0 +1,106 @@
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+
+name: Helm Chart federator-suite CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+    - 'charts/federator-suite/**'
+    - '!**.md'
+
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+    - 'charts/federator-suite/**'
+    - '!**.md'
+
+env:
+  CHART_DIR: ./charts/
+  PACKAGE_NAME: federator-suite
+  REGISTRY: ${{ github.ref == 'refs/heads/main' && 'ghcr.io/national-digital-twin/helm' || 'ghcr.io/national-digital-twin/helm-test' }}
+  VALUES_FILES: >-
+    -f values/common-values.yaml
+    -f values/kafka.yaml
+    -f values/valkey.yaml
+    -f values/vault.yaml
+    -f values/certificate-manager.yaml
+    -f values/federator.yaml
+    -f values/kafka-ui.yaml
+    -f values/valkey-ui.yaml
+    -f values/istio.yaml
+    -f values/dry-run.yaml
+
+jobs:
+  check:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.10.0
+
+      - name: Build Helm dependencies
+        run: |
+          helm dependency build $CHART_DIR$PACKAGE_NAME
+
+      - name: Helm lint
+        working-directory: ${{ env.CHART_DIR }}${{ env.PACKAGE_NAME }}
+        run: |
+          helm lint . ${{ env.VALUES_FILES }}
+
+  release:
+    name: Release
+    needs: check
+    if: ${{ github.event_name != 'pull_request' }}
+    permissions:
+      contents: write
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.10.0
+            
+      - name: login to ghcr using helm
+        shell: bash    
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login $REGISTRY --username ndtp --password-stdin
+
+      - name: Build Helm dependencies
+        run: |
+          helm dependency build $CHART_DIR$PACKAGE_NAME
+
+      - name: Set Version
+        run: |
+          python3 -m pip install pybump
+          version=$(pybump get --file $CHART_DIR$PACKAGE_NAME/Chart.yaml)
+          echo "version=$version" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Helm Package
+        run: |
+          echo "attempt to package with version ${{ env.version }}"
+          helm package $CHART_DIR$PACKAGE_NAME --version ${{ env.version }}
+
+      - name: Helm Chart
+        run : |
+          helm push $PACKAGE_NAME-${{ env.version }}.tgz oci://$REGISTRY
+        shell: bash

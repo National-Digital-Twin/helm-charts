@@ -266,9 +266,11 @@ Validate configuration - basic checks
 {{- end }}
 {{- end }}
 {{- end }}{{/* end vault devMode skip */}}
-{{- /* Certificate Manager validation (always enabled) */ -}}
+{{- /* Certificate Manager validation (only when enabled) */ -}}
+{{- if .Values.certificateManager.enabled }}
 {{- if eq .Values.certificateManager.image.tag "PLACEHOLDER_IMAGE_TAG" }}
 {{- fail "ERROR: certificateManager.image.tag is still a placeholder — set to the latest image tag" }}
+{{- end }}
 {{- end }}
 {{- /* Certificate validation disabled for templating - secrets should be provided at deployment time */ -}}
 {{- /* Single-switch Istio model: serviceMesh.istio.enabled controls all Istio resources */ -}}
@@ -502,6 +504,9 @@ aws.s3.region={{ .Values.federatorServer.config.storage.s3.region }}
 {{- else if eq (.Values.federatorServer.config.storage.provider | upper) "AZURE" }}
 files.storage.provider=AZURE
 azure.storage.connection.string={{ .Values.federatorServer.config.storage.azure.connectionString }}
+azure.storage.account.name={{ .Values.federatorServer.config.storage.azure.accountName }}
+azure.storage.endpoint={{ .Values.federatorServer.config.storage.azure.endpoint }}
+files.azure.container={{ .Values.federatorServer.config.storage.azure.container }}
 {{- else if eq (.Values.federatorServer.config.storage.provider | upper) "GCP" }}
 files.storage.provider=GCP
 files.gcp.bucket={{ .Values.federatorServer.config.storage.gcp.bucket }}
