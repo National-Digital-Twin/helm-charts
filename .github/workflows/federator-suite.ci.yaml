@@ -51,6 +51,10 @@ jobs:
         with:
           version: v3.10.0
 
+      - name: Add Helm repositories
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+
       - name: Build Helm dependencies
         run: |
           helm dependency build $CHART_DIR$PACKAGE_NAME
@@ -83,6 +87,10 @@ jobs:
         shell: bash    
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login $REGISTRY --username ndtp --password-stdin
+
+      - name: Add Helm repositories
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
 
       - name: Build Helm dependencies
         run: |
