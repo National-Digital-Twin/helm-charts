@@ -34,7 +34,7 @@ valkey:
 federatorServer:
   image:
     repository: iafederatoracr.azurecr.io/federator-server
-    tag: "18-02-26"
+    tag: "26-03-26-v1.2.0"
     pullPolicy: IfNotPresent
   
   replicaCount: 1
@@ -69,12 +69,13 @@ federatorServer:
         accountName: "iafederatorstorage"
         endpoint: "https://iafederatorstorage.blob.core.windows.net"
         connectionString: "<from-secrets>"
+        container: "consumer-container"
 
 # Federator Client - Azure Dev
 federatorClient:
   image:
     repository: iafederatoracr.azurecr.io/federator-client
-    tag: "18-02-26"
+    tag: "26-03-26-v1.2.0"
     pullPolicy: IfNotPresent
   
   replicaCount: 1
@@ -110,6 +111,7 @@ federatorClient:
         accountName: "iafederatorstorage"
         endpoint: "https://iafederatorstorage.blob.core.windows.net"
         connectionString: "<from-secrets>"
+        container: "consumer-container"
   
   # Override client-specific env for HEG
   env:
@@ -129,7 +131,7 @@ kafkaUi:
       service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 valkeyUi:
-  enabled: true
+  enabled: false
   image:
     repository: redis/redisinsight
     tag: latest
@@ -182,5 +184,17 @@ vault:
     server:
       extraContainers: []
       volumes: []
+
+# Certificate Manager - configured for AKS
+certificateManager:
+  enabled: true
+  image:
+    repository: "iafederatoracr.azurecr.io/federator-certificate-manager"
+    tag: "1.0.0"
+  persistence:
+    # AKS only has Azure Disk storage classes (ReadWriteOnce)
+    # ReadWriteMany requires Azure Files. Use RWO — scheduler colocates all pods
+    # that share this PVC (certificate-manager, federator-client, federator-server) on the same node.
+    accessMode: ReadWriteOnce
 
 # HEG-specific secrets (defined in secrets/heg-secrets.yaml)

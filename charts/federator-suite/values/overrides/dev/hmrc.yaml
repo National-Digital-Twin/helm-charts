@@ -7,20 +7,21 @@ global:
   clusterType: gke
   orgName: hmrc
   orgPrefix: hmrc
-  namespace: ia-federation  # Namespace must already exist in GKE cluster
+  namespace: ia-federation # Namespace must already exist in GKE cluster
 
 # Kafka Configuration
 kafka:
   external: false
   enabled: true  # In-cluster Kafka sub-chart enabled
   controller:
+    heapOpts: "-Xmx512m -Xms256m"
     resources:
       requests:
-        cpu: 75m
-        memory: 192Mi
+        cpu: 150m
+        memory: 512Mi
       limits:
-        cpu: 300m
-        memory: 384Mi
+        cpu: 500m
+        memory: 1Gi
   broker:
     resources:
       requests:
@@ -85,7 +86,7 @@ valkey:
 federatorServer:
   image:
     repository: europe-west2-docker.pkg.dev/development-486319/ndtp-ia-federator-server/federator-server
-    tag: "10-03-26"
+    tag: "26-03-26-v1.2.0"
     pullPolicy: IfNotPresent
   
   replicaCount: 1
@@ -110,14 +111,16 @@ federatorServer:
 
   affinity:
     podAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchExpressions:
-              - key: app
-                operator: In
-                values:
-                  - certificate-manager
-          topologyKey: kubernetes.io/hostname
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - certificate-manager
+            topologyKey: kubernetes.io/hostname
   
   service:
     type: ClusterIP
@@ -137,7 +140,7 @@ federatorServer:
 federatorClient:
   image:
     repository: europe-west2-docker.pkg.dev/development-486319/ndtp-ia-federator-client/federator-client
-    tag: "10-03-26"
+    tag: "26-03-26-v1.2.0"
     pullPolicy: IfNotPresent
   
   replicaCount: 1
@@ -162,14 +165,16 @@ federatorClient:
 
   affinity:
     podAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchExpressions:
-              - key: app
-                operator: In
-                values:
-                  - certificate-manager
-          topologyKey: kubernetes.io/hostname
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - certificate-manager
+            topologyKey: kubernetes.io/hostname
   
   service:
     type: ClusterIP
@@ -193,7 +198,7 @@ federatorClient:
 
 # Enable UIs for dev environment
 kafkaUi:
-  enabled: false
+  enabled: true
   image:
     repository: provectuslabs/kafka-ui
     tag: latest
@@ -204,7 +209,7 @@ kafkaUi:
       cloud.google.com/load-balancer-type: "External"
 
 valkeyUi:
-  enabled: false
+  enabled: true
   image:
     repository: redis/redisinsight
     tag: latest
@@ -240,6 +245,7 @@ serviceMesh:
         - cluster.local/ns/istio-ingress/sa/istio-ingress
       allowedNamespaces:
         - helm-ia-federation
+        - helm-ia-federation-2
         - ia-federation
         - ia-federation-org2
         - istio-ingress
@@ -276,7 +282,6 @@ vault:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchLabels:
-                  app.kubernetes.io/instance: federator-suite
                   app.kubernetes.io/name: vault
                   component: server
               topologyKey: kubernetes.io/hostname
