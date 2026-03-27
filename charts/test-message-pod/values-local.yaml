@@ -1,0 +1,37 @@
+# Example values for local development
+# Build local image first:
+#   cd curl-demo-pod
+#   docker build -t test-message-pod:local .
+#
+# Then install with:
+#   helm install test-msg charts/test-message-pod -n org-b -f charts/test-message-pod/values-local.yaml
+
+image:
+  repository: test-message-pod
+  tag: local
+  pullPolicy: Never
+
+# Kafka configuration for local Kind cluster
+kafka:
+  bootstrapServer: "kafka-cluster-kafka-bootstrap.org-b.svc.cluster.local:9092"
+  topic: "knowledge"
+  securityProtocol: "SASL_PLAINTEXT"
+  saslMechanism: "SCRAM-SHA-512"
+
+# Use existing Kafka credentials secret
+kafkaCredentialsSecret:
+  name: "kafka-auth-config"
+  enabled: true
+
+serviceAccount:
+  create: false
+  name: "default"
+
+# Minimal resources for local development
+resources:
+  requests:
+    memory: "16Mi"
+    cpu: "5m"
+  limits:
+    memory: "256Mi"
+    cpu: "200m"

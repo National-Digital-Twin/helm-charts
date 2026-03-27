@@ -41,3 +41,6 @@ overrides.yaml
 *.crt
 *.key
 *.env
+
+mongooverrides.yaml
+*.Zone.Identifier

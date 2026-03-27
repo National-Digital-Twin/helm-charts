@@ -30,5 +30,10 @@ spec:
   {{- end }}
   selector:
     matchLabels:
+      {{- if .Values.kafkaCluster.componentSelectorLabels }}
       {{- toYaml .Values.kafkaCluster.componentSelectorLabels | nindent 6 }}
+      {{- else }}
+      {{- printf "strimzi.io/cluster: %s" .Values.kafkaCluster.name | nindent 6 }}
+      {{- printf "strimzi.io/kind: %s" "Kafka" | nindent 6 }}
+      {{- end }}
 {{- end }}

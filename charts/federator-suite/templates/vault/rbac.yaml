@@ -1,0 +1,41 @@
+{{- if .Values.vault.enabled }}
+{{- $vaultSA := printf "%s-vault" .Release.Name }}
+---
+# Role allowing Vault to get/patch its own pod for service_registration "kubernetes" {}
+# Without this, vault logs: unable to set initial state: bad status code: 403
+# Note: vault sub-chart SA is <release>-vault, distinct from federator-suite-vault-sa
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $vaultSA }}-service-registration
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "federator-suite.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vault
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "patch", "update"]
+  {{- if .Values.vault.devMode }}
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "update", "patch"]
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $vaultSA }}-service-registration
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "federator-suite.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vault
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $vaultSA }}-service-registration
+subjects:
+  - kind: ServiceAccount
+    name: {{ $vaultSA }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

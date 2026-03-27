@@ -1,0 +1,297 @@
+# Federator Server & Client Configuration
+
+federatorServer:
+  enabled: true
+  
+  image:
+    repository: federator-server
+    tag: "local"
+    pullPolicy: Never  # Use local image for Kind
+  
+  replicaCount: 1
+  
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+  
+  podAnnotations: {}
+  
+  # Deployment strategy (matches live deployments)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  revisionHistoryLimit: 3
+  
+  podSecurityContext:
+    fsGroup: 10101
+    runAsGroup: 10101
+    runAsNonRoot: true
+    runAsUser: 10101
+    seccompProfile:
+      type: RuntimeDefault
+  
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    runAsGroup: 10101
+    runAsNonRoot: true
+    runAsUser: 10101
+    seccompProfile:
+      type: RuntimeDefault
+  
+  imagePullSecrets: []
+  
+  nodeSelector: {}
+  
+  tolerations: []
+  
+  affinity: {}
+  
+  resources:
+    requests:
+      cpu: 256m
+      memory: 512Mi
+    limits:
+      cpu: 512m
+      memory: 1Gi
+  
+  service:
+    type: ClusterIP
+    annotations: {}
+    # For NodePort access in local:
+    # type: NodePort
+    # nodePort: 30080
+  
+  # Server-specific configuration
+  config:
+    serverPort: 8080
+    logLevel: INFO
+    
+    # Kafka topic configuration
+    kafkaTopicPrefix: "Deprecated"
+    inboundTopic: "inbound"
+    outboundTopic: "outbound"
+    
+    # Kafka consumer settings
+    kafkaConsumerGroup: server.consumer
+    kafkaPollDuration: PT10S
+    kafkaPollRecords: 100
+    kafkaKeyDeserializer: org.apache.kafka.common.serialization.StringDeserializer
+    kafkaValueDeserializer: uk.gov.dbt.ndtp.federator.access.AccessMessageDeserializer
+    
+    # Data sharing configuration
+    sharedHeaders: "Security-Label^Content-Type"
+    filterShareAll: false
+    
+    # Redis/Valkey configuration
+    redisPort: 6379
+    redisTlsEnabled: false
+    redisPrefix: "federator-server"  # Override per org
+    
+    # Jobs dashboard (JobRunr)
+    jobsDashboardPort: 8085
+    jobsDashboardEnabled: true
+    jobsDefaultAllowConcurrentExecution: false
+    
+    # File streaming
+    fileStreamChunkSize: 1000
+    
+    # mTLS Configuration
+    mtlsEnabled: true
+    keepAliveTime: 10
+    
+    # Client name (org identifier)
+    clientName: ""
+    
+    # Storage provider configuration
+    storage:
+      provider: LOCAL  # LOCAL, S3, AZURE, or GCS
+      s3:
+        bucket: ""
+        region: ""
+      azure:
+        connectionString: ""
+        accountName: ""
+        endpoint: ""
+      gcp:
+        bucket: ""
+  
+  # Environment variables for the deployment
+  env:
+    IDP_TRUSTSTORE_PATH: /secrets/federation-cert/keycloak.truststore.jks
+    IDP_KEYSTORE_PATH: /secrets/federation-cert/ndtp-keystore.jks
+    SERVER_P12_FILE_PATH: /secrets/federation-server-p12/dev-ndtp.p12
+    SERVER_TRUSTSTORE_FILE_PATH: /secrets/federation-cert/keycloak.truststore.jks
+  
+  # Volume mounts (automatically configured from values)
+  volumeMounts:
+    - name: config-volume
+      mountPath: /config
+      readOnly: true
+    - name: common-configuration-volume
+      mountPath: /common-configuration
+      readOnly: true
+    - name: access-map-volume
+      mountPath: /access-map
+      readOnly: true
+    - name: kafka-auth-config
+      mountPath: /app/config/kafka-auth/
+      readOnly: true
+    - name: federation-cert
+      mountPath: /secrets/federation-cert
+      readOnly: true
+    - name: federation-server-p12
+      mountPath: /secrets/federation-server-p12
+      readOnly: true
+
+federatorClient:
+  enabled: true
+  
+  image:
+    repository: federator-client
+    tag: "local"
+    pullPolicy: Never  # Use local image for Kind
+  
+  replicaCount: 1
+  
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+  
+  podAnnotations: {}
+  
+  # Deployment strategy (matches live deployments)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  revisionHistoryLimit: 3
+  
+  podSecurityContext:
+    fsGroup: 10101
+    runAsGroup: 10101
+    runAsNonRoot: true
+    runAsUser: 10101
+    seccompProfile:
+      type: RuntimeDefault
+  
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    runAsGroup: 10101
+    runAsNonRoot: true
+    runAsUser: 10101
+    seccompProfile:
+      type: RuntimeDefault
+  
+  imagePullSecrets: []
+  
+  nodeSelector: {}
+  
+  tolerations: []
+  
+  affinity: {}
+  
+  service:
+    type: ClusterIP
+    annotations: {}
+  
+  resources:
+    requests:
+      cpu: 128m
+      memory: 256Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
+  
+  # Client-specific configuration
+  config:
+    serverPort: 8081
+    logLevel: INFO
+    
+    # Kafka topic configuration
+    kafkaTopicPrefix: "Deprecated"  # Override per org
+    inboundTopic: "inbound"
+    outboundTopic: "outbound"
+    
+    # Kafka consumer settings
+    kafkaConsumerGroup: "ndtp.dbt.gov.uk"  # Override per org
+    kafkaKeySerializer: org.apache.kafka.common.serialization.BytesSerializer
+    kafkaValueSerializer: org.apache.kafka.common.serialization.BytesSerializer
+    
+    # Redis/Valkey configuration
+    redisPort: 6379
+    redisTlsEnabled: false
+    redisPrefix: "federator-client"  # Override per org
+    redisAesKey: ""
+    
+    # mTLS Configuration
+    mtlsEnabled: true
+    tlsEnabled: true
+    
+    # Consumer group (org identifier)
+    consumerGroup: ""
+    
+    # File storage configuration
+    storage:
+      provider: LOCAL  # LOCAL, S3, AZURE, or GCS
+      local:
+        tempDir: /tmp/federator-files
+      s3:
+        bucket: ""
+        region: ""
+      azure:
+        connectionString: ""
+        accountName: ""
+        endpoint: ""
+        container: ""
+      gcp:
+        bucket: ""
+    
+    # Jobs dashboard (JobRunr)
+    jobsDashboardPort: 8085
+    jobsDashboardEnabled: true
+    jobsDefaultAllowConcurrentExecution: false
+    
+    # Connection configuration file location
+    connectionsConfiguration: /client-connections/connection-configuration.json
+    commonConfiguration: /common-configuration/common-configuration.properties
+  
+  # Environment variables for the deployment
+  env:
+    IDP_KEYSTORE_PATH: /secrets/federation-cert/client-org1-keystore.jks
+    IDP_TRUSTSTORE_PATH: /secrets/federation-cert/keycloak.truststore.jks
+    CLIENT_P12_FILE_PATH: /secrets/federation-client-p12/client-org1.p12
+    CLIENT_TRUSTSTORE_FILE_PATH: /secrets/federation-cert/keycloak.truststore.jks
+  
+  # Volume mounts (automatically configured from values)
+  volumeMounts:
+    - name: config-volume
+      mountPath: /config
+      readOnly: true
+    - name: common-configuration-volume
+      mountPath: /common-configuration
+      readOnly: true
+    - name: client-connections
+      mountPath: /client-connections
+      readOnly: true
+    - name: kafka-auth-config
+      mountPath: /app/config/kafka-auth/
+      readOnly: true
+    - name: federation-cert
+      mountPath: /secrets/federation-cert
+      readOnly: true
+    - name: federation-client-p12
+      mountPath: /secrets/federation-client-p12
+      readOnly: true

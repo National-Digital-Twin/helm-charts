@@ -1,0 +1,38 @@
+# BCC Organization Configuration (Local)
+
+global:
+  orgName: bcc
+  orgNumber: org1  # Used for certificate naming: client-org1.p12, client-org1-keystore.jks
+  namespace: ia-federation  # Will be created by Makefile for local env
+
+federatorServer:
+  config:
+    redisPrefix: "federator-server-bcc"
+
+federatorClient:
+  config:
+    kafkaTopicPrefix: "DeprecatedBCC"
+    kafkaConsumerGroup: "ndtp.dbt.gov.uk.bcc"
+    redisPrefix: "federator-client-bcc"
+  
+  # Override client-specific env
+  env:
+    IDP_KEYSTORE_PATH: /secrets/federation-cert/client-org1-keystore.jks
+    CLIENT_P12_FILE_PATH: /secrets/federation-client-p12/client-org1.p12
+
+# BCC-specific secrets (override in values-secrets.yaml)
+secrets:
+  idp:
+    clientId: "FEDERATOR_BCC"
+  
+  clientConnectionConfig:
+    content: |
+      {
+        "connections": [
+          {
+            "name": "env-server",
+            "host": "federator-server.ia-federation-env.svc.cluster.local",
+            "port": 8080
+          }
+        ]
+      }

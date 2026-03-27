@@ -1,0 +1,11 @@
+# Test Values - Bypasses certificate requirements for dry-run testing
+# DO NOT USE IN PRODUCTION
+
+secrets:
+  create: false  # Don't create secrets for dry-run
+  certificates:
+    external:
+      existingSecrets:
+        federationCert: "existing-federation-cert"
+        clientP12: "existing-client-p12"
+        serverP12: "existing-server-p12"

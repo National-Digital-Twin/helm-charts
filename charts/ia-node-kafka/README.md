@@ -52,14 +52,20 @@ Versions highlighted are based on what configurations have been used throughout 
   
 - **Installation Requirements:** 
   - [`Istio Helm chart, Gateway, Base and Istiod 1.25.0+`](https://istio.io/latest/docs/setup/install/helm/): service mesh that layers onto existing application, providing uniform and more efficient ways to secure, connect, and monitor services
-  - [`Kafka Strimzi Operator 0.45.0+`](https://artifacthub.io/packages/helm/strimzi-kafka-operator/strimzi-kafka-operator): bootstraps the Strimzi Cluster Operator Deployment, Cluster Roles, Cluster Role Bindings, Service Accounts, and Custom Resource Definitions for running Apache Kafka
+  - [`Kafka Strimzi Operator 0.48.0+`](https://artifacthub.io/packages/helm/strimzi-kafka-operator/strimzi-kafka-operator): bootstraps the Strimzi Cluster Operator Deployment, Cluster Roles, Cluster Role Bindings, Service Accounts, and Custom Resource Definitions for running Apache Kafka. Note: Version 0.48.0+ is required for Kafka 4.x with KRaft mode support.
 
 ## Installing the Chart
 
-Install the Kafka Strimizi Operator and then run the following to install. Ensure that 'watchAnyNamespace' is set to true if you want the operator to work against any namespace. 
+Install the Kafka Strimzi Operator and then run the following to install. Ensure that 'watchAnyNamespace' is set to true if you want the operator to work against any namespace. 
 
+Note: The below --set commands for resources are optional and configured for small environments
 ```sh
-helm install my-strimzi-cluster-operator oci://quay.io/strimzi-helm/strimzi-kafka-operator  --namespace kafka-operator --create-namespace --set watchAnyNamespace="true"
+helm install my-strimzi-cluster-operator oci://quay.io/strimzi-helm/strimzi-kafka-operator --namespace kafka-operator --create-namespace \
+  --set watchAnyNamespace="true" \
+  --set resources.requests.cpu=50m \
+  --set resources.requests.memory=128Mi \
+  --set resources.limits.cpu=500m \
+  --set resources.limits.memory=256Mi
 ```
 
 Create the target namespace if it does not already exist, typically this will be the same namespace as the core IA Node application. 
@@ -74,7 +80,7 @@ If running Istio in side car mode, remember to add the injection label:
 kubectl label namespace ia-node istio-injection=enabled
 ```
 
-Install the latest chart: 
+Install the latest chart (defaults to Kafka 4.1.0 with KRaft mode for small environments): 
 
 ```sh
 helm install ia-node-kafka oci://ghcr.io/national-digital-twin/helm/ia-node-kafka -n ia-node
@@ -85,6 +91,9 @@ Optionally, use an overrides.yaml:
 ```sh
 helm install ia-node-kafka oci://ghcr.io/national-digital-twin/helm/ia-node-kafka -n ia-node -f ./overrides.yaml 
 ```
+
+> [!NOTE]
+> The chart now defaults to Kafka 4.1.0 with KRaft mode (no ZooKeeper) for better performance and reduced resource usage. For production environments with multiple brokers, adjust `kafkaCluster.spec.kraft.brokerReplicas` and `kafkaCluster.spec.kraft.controllerReplicas` accordingly.
 
 ## Uninstall the Chart
 

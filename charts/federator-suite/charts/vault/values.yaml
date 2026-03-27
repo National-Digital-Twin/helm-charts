@@ -1,0 +1,54 @@
+# Vault Subchart Values
+# This subchart wraps the official HashiCorp Vault chart (v0.29.1)
+
+enabled: true  # Core component — always enabled
+
+# HashiCorp Vault chart configuration
+vault:
+  global:
+    enabled: true
+
+  server:
+    enabled: true
+    image:
+      repository: hashicorp/vault
+      tag: "1.18.1"
+
+    # HA mode with Raft integrated storage
+    ha:
+      enabled: true
+      replicas: 3
+      raft:
+        enabled: true
+
+    # Resources
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    dataStorage:
+      enabled: true
+      size: 10Gi
+      storageClass: null  # Uses default StorageClass
+
+    auditStorage:
+      enabled: true
+      size: 10Gi
+      storageClass: null
+
+  # Vault UI — enabled for port-forward access
+  ui:
+    enabled: true
+    serviceType: ClusterIP
+
+  # Injector disabled - not needed for this use case
+  injector:
+    enabled: false
+
+  # CSI provider disabled
+  csi:
+    enabled: false

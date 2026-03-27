@@ -1,0 +1,158 @@
+# Local Kind Deployment Configuration
+# Usage: helm install federator-suite . -f values.yaml -f values-local.yaml -f values-secrets.yaml
+
+global:
+  environment: local
+  clusterType: kind
+
+# Use in-cluster Strimzi Kafka for local
+kafka:
+  external: false
+  enabled: true  # Enable in-cluster Bitnami Kafka
+  # Override: Enable persistence for local Kind cluster
+  persistence:
+    enabled: true
+    size: 500Mi  # 500MB for local development
+
+# Use in-cluster Valkey for local
+valkey:
+  external: false
+  enabled: true  # Enable in-cluster Bitnami Valkey
+  inClusterConfig:
+    auth:
+      enabled: false
+      password: ""
+    tls:
+      enabled: false
+
+
+# Federator Server - Local Configuration
+federatorServer:
+  image:
+    repository: federator-server
+    tag: local
+    pullPolicy: Never
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  serviceAccount:
+    create: true
+    annotations: {}
+  service:
+    type: NodePort
+    port: 8080
+    nodePort: 30080  # Access via localhost:8080
+  config:
+    serverPort: 8080
+
+
+# Federator Client - Local Configuration
+federatorClient:
+  image:
+    repository: federator-client
+    tag: local
+    pullPolicy: Never
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  serviceAccount:
+    create: true
+    annotations: {}
+  service:
+    type: NodePort
+    port: 8081
+    nodePort: 30081  # Access via localhost:8081
+  config:
+    serverPort: 8081
+
+# Enable UIs for local development
+kafkaUi:
+  enabled: true
+  service:
+    nodePort: 30090  # Access via localhost:9090
+
+valkeyUi:
+  enabled: true
+  service:
+    nodePort: 30091  # Access via localhost:9091
+
+# Istio disabled for local
+serviceMesh:
+  istio:
+    enabled: false
+
+# Certificate Manager — Local
+certificateManager:
+  image:
+    repository: ndtp/federator-certificate-manager
+    tag: "local"          # locally built image with configurable Vault auth
+    pullPolicy: Never
+  persistence:
+    # KIND local-path provisioner only supports ReadWriteOnce (not ReadWriteMany)
+    accessMode: ReadWriteOnce
+  vaultToken:
+    # Init container blocks until vault-setup sidecar creates token secret
+    useSecret: true
+  config:
+    vault:
+      # Override default KUBERNETES → TOKEN for local Shamir-seal Vault
+      # Corresponds to application.yml: authentication: ${VAULT_AUTHENTICATION:token}
+      authentication: TOKEN
+
+# Management Node - Local
+managementNode:
+  baseUrl: "http://localhost:8082"  # Adjust if management node is also local
+
+# ── Vault — Local (KIND) Configuration ──────────────────────────────────────
+# Uses Shamir seal (no cloud KMS), single replica, stores credentials in k8s Secret
+vault:
+  devMode: true
+
+  ha:
+    replicas: 1
+
+  vault:
+    server:
+      ha:
+        enabled: false
+        replicas: 1
+        raft:
+          enabled: true
+          config: |
+            ui = true
+
+            listener "tcp" {
+              tls_disable = 1
+              address     = "[::]:8200"
+              cluster_address = "[::]:8201"
+            }
+
+            storage "raft" {
+              path = "/vault/data"
+            }
+
+            # No seal stanza — uses Shamir seal for local development
+            service_registration "kubernetes" {}
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 250m
+          memory: 256Mi
+      dataStorage:
+        enabled: true
+        size: 1Gi
+      auditStorage:
+        enabled: true
+        size: 1Gi

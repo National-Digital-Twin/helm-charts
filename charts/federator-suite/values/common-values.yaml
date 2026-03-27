@@ -1,0 +1,87 @@
+# Federator Suite - Base Global Configuration
+# This file contains only global settings that apply across all components
+
+global:
+  # Organization configuration (override per deployment)
+  orgName: default
+  orgPrefix: default
+  namespace: ia-federation  # Override in environment-specific values
+  
+  # Namespace management
+  createNamespace: false  # Set to true if you want Helm to manage the namespace
+  
+  # Management node connectivity
+  managementNode:
+    baseUrl: "https://ia-management-node.dev.ndtp.co.uk:443"
+    cacheTtlSeconds: 60
+    requestTimeout: 60
+  
+  # Image pull policy
+  imagePullPolicy: IfNotPresent
+  
+  # Common labels applied to all resources
+  labels:
+    app.kubernetes.io/part-of: federator-suite
+    ndtp.io/resource: "true"
+
+# Feature toggles
+istio:
+  enabled: false  # Always optional, default disabled
+
+networkPolicy:
+  enabled: false  # Optional, disabled for local testing
+
+# Federator components (default enabled)
+federatorServer:
+  enabled: true
+
+federatorClient:
+  enabled: true
+
+# Secrets configuration (override in environment-specific secrets files)
+secrets:
+  create: true
+  certificates:
+    source: external
+    
+    # Option A: External/Pre-generated Certificates (default)
+    external:
+      truststoreJks: "<set-in-overrides>"
+      truststorePassword: "<set-in-overrides>"
+      serverKeystoreJks: "<set-in-overrides>"
+      serverKeystorePassword: "<set-in-overrides>"
+      clientKeystoreJks: "<set-in-overrides>"
+      clientKeystorePassword: "<set-in-overrides>"
+      clientP12: "<set-in-overrides>"
+      clientP12Password: "<set-in-overrides>"
+      clientP12Filename: "<set-in-overrides>"  # Override per org
+      serverP12: "<set-in-overrides>"
+      serverP12Password: "<set-in-overrides>"
+      serverP12Filename: "<set-in-overrides>"  # Override per org
+      existingSecrets:
+        federationCert: ""
+        clientP12: ""
+        serverP12: ""
+  
+  kafkaAuth:
+    securityProtocol: "<set-in-overrides>"
+    saslMechanism: "<set-in-overrides>"
+    username: "<set-in-overrides>"
+    password: "<set-in-overrides>"
+    jaasConfig: "<set-in-overrides>"  # Will be provided in overrides
+  idp:
+    clientId: "<set-in-overrides>"
+    jwksUrl: "<set-in-overrides>"
+    tokenUrl: "<set-in-overrides>"
+    mtlsEnabled: true
+    keystorePassword: "<set-in-overrides>"
+    truststorePassword: "<set-in-overrides>"
+  clientConnectionConfig:
+    content: '{"connections":[]}'
+
+# Service account base configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  # AWS EKS: eks.amazonaws.com/role-arn: "arn:aws:iam::..."
+  # Azure AKS: azure.workload.identity/client-id: "..."

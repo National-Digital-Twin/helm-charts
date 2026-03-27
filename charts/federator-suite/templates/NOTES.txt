@@ -1,0 +1,220 @@
+{{- $serverPort := .Values.federatorServer.service.port | default 8080 -}}
+{{- $clientPort := .Values.federatorClient.service.port | default 8080 -}}
+{{- $istioEnabled := false -}}
+{{- if .Values.serviceMesh }}{{- if .Values.serviceMesh.istio }}{{- $istioEnabled = .Values.serviceMesh.istio.enabled }}{{- end }}{{- end -}}
+================================================================================
+  Federator Suite Successfully Deployed!
+================================================================================
+
+Release Name:   {{ .Release.Name }}
+Namespace:      {{ .Release.Namespace }}
+Organization:   {{ .Values.global.orgName }}
+Environment:    {{ .Values.global.environment }}
+{{- if .Values.global.clusterType }}
+Cluster Type:   {{ .Values.global.clusterType }}
+{{- end }}
+
+--------------------------------------------------------------------------------
+DEPLOYMENT STATUS
+--------------------------------------------------------------------------------
+
+Kafka:    {{ if not .Values.kafka.external }}In-Cluster (Bitnami){{ else }}External ({{ .Values.kafka.externalConfig.bootstrapServers }}){{ end }}
+Valkey:   {{ if not .Values.valkey.external }}In-Cluster (Bitnami){{ else }}External ({{ .Values.valkey.externalConfig.host }}:{{ .Values.valkey.externalConfig.port | default 6379 }}){{ end }}
+Istio:    {{ if $istioEnabled }}Enabled{{ else }}Disabled{{ end }}
+
+Components Deployed:
+  ✓ Federator Server
+  ✓ Federator Client
+  ✓ HashiCorp Vault (HA Raft, KV v2)
+  ✓ Certificate Manager (headless scheduler)
+{{- if .Values.kafkaUi.enabled }}
+  ✓ Kafka UI
+{{- end }}
+{{- if .Values.valkeyUi.enabled }}
+  ✓ Valkey UI
+{{- end }}
+
+--------------------------------------------------------------------------------
+ACCESS INFORMATION
+--------------------------------------------------------------------------------
+
+{{- if eq .Values.global.environment "local" }}
+
+Local Access (Kind Cluster):
+
+  Federator Server:
+    http://localhost:8080
+
+  Federator Client:
+    http://localhost:8081
+
+{{- if .Values.kafkaUi.enabled }}
+  Kafka UI:
+    http://localhost:8088
+{{- end }}
+
+{{- if .Values.valkeyUi.enabled }}
+  Valkey UI:
+    http://localhost:{{ .Values.valkeyUi.service.nodePort | default 30091 }}
+{{- end }}
+
+{{- else }}
+
+Port Forwarding:
+
+  Start all port forwards:
+{{- if eq .Values.global.environment "dev" }}
+    make port-forward-all ENV=dev ORG={{ .Values.global.orgName }}
+{{- else if eq .Values.global.environment "prod" }}
+    make port-forward-all ENV=prod ORG={{ .Values.global.orgName }}
+{{- else }}
+    make port-forward-all ORG={{ .Values.global.orgName }}
+{{- end }}
+
+  This will make available:
+    - Client JobRunr Dashboard:  http://localhost:8085
+    - Kafka UI:                  http://localhost:8088
+    - Valkey UI:                 http://localhost:5540
+    - Vault UI:                  http://localhost:8200
+
+  Check status:
+    make port-forward-status
+
+  Stop all:
+    make stop-port-forwards
+
+{{- end }}
+
+--------------------------------------------------------------------------------
+VERIFICATION COMMANDS
+--------------------------------------------------------------------------------
+
+Health Check:
+{{- if eq .Values.global.environment "dev" }}
+  make healthcheck ENV=dev ORG={{ .Values.global.orgName }}
+{{- else if eq .Values.global.environment "prod" }}
+  make healthcheck ENV=prod ORG={{ .Values.global.orgName }}
+{{- else }}
+  make healthcheck ORG={{ .Values.global.orgName }}
+{{- end }}
+
+View Logs:
+  make logs-server       # Server logs
+  make logs-client       # Client logs
+  make logs              # All pods (last 50 lines)
+
+--------------------------------------------------------------------------------
+CONFIGURATION
+--------------------------------------------------------------------------------
+
+Management Node:
+  {{ .Values.global.managementNode.baseUrl }}
+
+Kafka Bootstrap Servers:
+  {{- if .Values.kafka.external }}
+  {{ .Values.kafka.externalConfig.bootstrapServers }}
+  {{- else }}
+  {{ .Release.Name }}-kafka:9092
+  {{- end }}
+
+Valkey Host:
+  {{- if .Values.valkey.external }}
+  {{ .Values.valkey.externalConfig.host }}:{{ .Values.valkey.externalConfig.port | default 6379 }}
+  {{- else }}
+  {{ .Release.Name }}-valkey-primary:6379
+  {{- end }}
+
+Security Protocol:
+  {{- if .Values.kafka.external }}
+  {{ .Values.kafka.externalConfig.securityProtocol }}
+  {{- else }}
+  SASL_PLAINTEXT
+  {{- end }}
+
+Vault:
+  Address: {{ include "federator-suite.vault.addr" . }}
+  HA Mode: {{ .Values.vault.ha.replicas }} replicas (Raft)
+  KV v2:   secret/
+  UI:      Enabled (port-forward to 8200)
+  Cloud:   {{ include "federator-suite.cloudProvider" . | upper }}
+  {{- if .Values.vault.setup.enabled }}
+  Setup:    Enabled (vault-setup sidecar on vault-0)
+  {{- end }}
+
+Certificate Manager:
+  Image:    {{ .Values.certificateManager.image.repository }}:{{ .Values.certificateManager.image.tag }}
+  Schedule: {{ .Values.certificateManager.config.cert.scheduleCron | default "0 0 2 * * ?" }}
+  Output:   {{ .Values.certificateManager.config.cert.outputDir | default "/certs" }}
+  PVC:      {{ include "federator-suite.certStorage.claimName" . }}
+
+--------------------------------------------------------------------------------
+NEXT STEPS
+--------------------------------------------------------------------------------
+
+1. Verify all pods are running:
+   kubectl get pods -n {{ .Release.Namespace }}
+
+2. Check server process:
+   kubectl exec -n {{ .Release.Namespace }} deploy/{{ .Release.Name }}-federator-server -- ps aux | grep java
+
+3. View application logs:
+   kubectl logs -l app=federator-server -n {{ .Release.Namespace }} --tail=50
+
+{{- if eq .Values.global.environment "local" }}
+
+4. Access the UIs:
+   - Kafka UI:  http://localhost:8088
+   - Valkey UI: http://localhost:5540
+   - Client Jobs: http://localhost:8085
+
+{{- end }}
+
+5. For troubleshooting, see:
+   README.md in the chart directory
+
+--------------------------------------------------------------------------------
+USEFUL COMMANDS
+--------------------------------------------------------------------------------
+
+# Upgrade release
+helm upgrade {{ .Release.Name }} . -n {{ .Release.Namespace }} \\
+  -f values/common-values.yaml \\
+  -f values/kafka.yaml \\
+  -f values/valkey.yaml \\
+  -f values/vault.yaml \\
+  -f values/certificate-manager.yaml \\
+  -f values/federator.yaml \\
+  -f values/kafka-ui.yaml \\
+  -f values/valkey-ui.yaml \\
+  -f values/istio.yaml \\
+{{- if eq .Values.global.environment "local" }}
+  -f values/overrides/local/{{ .Values.global.orgName }}.yaml \\
+  -f values/overrides/local/secrets.yaml
+{{- else if eq .Values.global.environment "dev" }}
+  -f values/overrides/dev/{{ .Values.global.orgName }}.yaml \\
+  -f values/overrides/dev/secrets/{{ .Values.global.orgName }}-secrets.yaml
+{{- else if eq .Values.global.environment "prod" }}
+  -f values/overrides/prod/{{ .Values.global.orgName }}.yaml \\
+  -f values/overrides/prod/secrets/{{ .Values.global.orgName }}-secrets.yaml
+{{- end }}
+
+# Uninstall release
+helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+# Get release values
+helm get values {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+# View release history
+helm history {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+# Rollback to previous version
+helm rollback {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+# Vault operations
+make status                      # All pods, services, PVCs, jobs
+make healthcheck                 # Pod readiness + error scan
+make port-forward-all            # Forward all UIs (8085, 8088, 5540, 8200)
+
+================================================================================
+  For more information, see README.md in this chart directory
+================================================================================

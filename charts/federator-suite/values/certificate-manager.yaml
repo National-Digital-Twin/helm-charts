@@ -1,0 +1,117 @@
+# ============================================================================
+# Certificate Manager Component Values
+# ============================================================================
+
+
+certificateManager:
+  enabled: true
+
+  # ── Replica Configuration ───────────────────────────────────────────────────
+  # Certificate manager is a singleton scheduler — keep at 1
+  replicaCount: 1
+
+  # ── Image Configuration ─────────────────────────────────────────────────────
+  image:
+    # PLACEHOLDER: Set to your container registry
+    repository: "PLACEHOLDER_REGISTRY/federator-certificate-manager"
+    # PLACEHOLDER: Set to the latest image tag
+    tag: "PLACEHOLDER_IMAGE_TAG"
+    pullPolicy: IfNotPresent
+
+  imagePullSecrets: []
+
+  # ── Service Account ─────────────────────────────────────────────────────────
+  serviceAccount:
+    create: true
+    name: ""  # Defaults to <release>-certificate-manager via helper
+    annotations: {}
+
+  # ── Pod Configuration ───────────────────────────────────────────────────────
+  podAnnotations: {}
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false  # Needs to write certs to /certs
+    capabilities:
+      drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # ── Persistence (shared PVC for cert storage) ──────────────────────────────
+  persistence:
+    accessMode: ReadWriteMany
+    size: 1Gi
+    storageClass: ""  # Uses default StorageClass; set to "efs-sc" for AWS EFS
+
+  # ── Bootstrap Certificate ──────────────────────────────────────────────────
+  bootstrapCert:
+    enabled: false
+    secretName: ""  # Name of pre-created Secret containing bootstrap PKCS12
+
+  # ── Application Configuration ──────────────────────────────────────────────
+  config:
+    logLevel: INFO
+
+    # Vault settings
+    vault:
+      kvPath: secret
+      # secretPath: KV v2 mount + sub-path used by VaultSecretProviderImpl.
+      # First segment is the KV mount name; remainder is the secret sub-path.
+      # The init job provisions the mount named by the first path segment.
+      secretPath: "node-net/client"
+      # authentication: TOKEN for Shamir/local (reads VAULT_TOKEN), KUBERNETES for cloud k8s auth
+      authentication: KUBERNETES
+      authRole: certificate-manager
+
+    # Management Node connectivity
+    managementNode:
+      # PLACEHOLDER: Override per environment
+      baseUrl: ""  # Falls back to global.managementNode.baseUrl if empty
+      requestTimeout: "60"
+
+    # OAuth2 configuration for Management Node API
+    oauth2:
+      enabled: false
+      # PLACEHOLDER: Set per environment
+      tokenUri: ""
+      clientId: ""
+
+    # Certificate generation settings
+    cert:
+      outputDir: /certs
+      renewalDaysBefore: "30"
+      scheduleCron: "0 0 2 * * ?"
+      # PLACEHOLDER: Set per environment
+      subjectOrg: ""
+      subjectCountry: ""
+
+
+    mtls:
+      keystorePath: ""     
+      truststorePath: ""  
+      keystoreType: "PKCS12"
+
+  # ── Vault Token (TOKEN auth mode only) ──────────────────────────────────────
+  # Used when config.vault.authentication=TOKEN (local/dev without k8s auth).
+  # The init container blocks startup until the secret exists, preventing
+  # Spring Cloud Vault failing with "spring.cloud.vault.token is empty".
+  vaultToken:
+    # Set true when using TOKEN auth — injects VAULT_TOKEN from a pre-existing k8s Secret
+    useSecret: false
+    # In local mode, this secret is created by the vault-setup sidecar on vault-0
+
+  # ── Scheduling ──────────────────────────────────────────────────────────────
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

@@ -1,0 +1,8 @@
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = federator-server
+DNS.2 = federator-server.ia-federation
+DNS.3 = federator-server.ia-federation.svc
+DNS.4 = federator-server.ia-federation.svc.cluster.local
+DNS.5 = localhost
+IP.1 = 127.0.0.1

@@ -355,17 +355,18 @@ Although oAuth2 Proxy has been the tool, that has been tested against the latest
 
 ###  Istio
 
-| Name                          | Description                                                                         | Value                                           |
-| ----------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------- |
-| istio.annotations             | used to override default annotations on just Istio Components                       | {}                                              |
-| istio.enabled                 | enabled by default, but used to disable Istio components                            | true                                            |
-| istio.extraDefaults           | deploys peer authentication and auth deny rules when different namespace            | false                                           |
-| istio.principal               | used for auth policy and defaults to gateway ingress                                | cluster.local/ns/istio-system/sa/ingressgateway |
-| istio.peerAuthenticationMode  | can be set to PERMISSIVE for debugging but not recommended long term                | STRICT                                          |
-| istio.componentSelectorLabels | used to update the selector label for Istio which can differ for different installs | istio: ingressgateway                           |
-| istio.namespace               | namespace where Istio ingress has been installed                                    | istio-system                                    |
-| istio.virtualService.hosts    | hosts default                                                                       | [ * ]                                           |
-| istio.virtualService.gateways | gateway reference                                                                   | [ istio-system/istio-gateway  ]                 |
+| Name                            | Description                                                                         | Value                                           |
+| ------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------- |
+| istio.annotations               | used to override default annotations on just Istio Components                       | {}                                              |
+| istio.enabled                   | enabled by default, but used to disable Istio components                            | true                                            |
+| istio.extraDefaults             | deploys peer authentication and auth deny rules when different namespace            | false                                           |
+| istio.principal                 | used for auth policy and defaults to gateway ingress                                | cluster.local/ns/istio-system/sa/ingressgateway |
+| istio.peerAuthenticationMode    | can be set to PERMISSIVE for debugging but not recommended long term                | STRICT                                          |
+| istio.componentSelectorLabels   | used to update the selector label for Istio which can differ for different installs | istio: ingressgateway                           |
+| istio.namespace                 | namespace where Istio ingress has been installed                                    | istio-system                                    |
+| istio.authorizationPolicy.hosts | hosts default                                                                       | [ * ]                                           |
+| istio.virtualService.hosts      | hosts default                                                                       | [ * ]                                           |
+| istio.virtualService.gateways   | gateway reference                                                                   | [ istio-system/istio-gateway  ]                 |
 
 ###  Application 
 

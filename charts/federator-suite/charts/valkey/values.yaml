@@ -1,0 +1,66 @@
+# Valkey Subchart Values
+# This subchart wraps Bitnami Valkey chart
+
+enabled: false  # Controlled by parent values-valkey.yaml
+
+# Allow Bitnami Legacy images (moved from bitnami/* to bitnamilegacy/*)
+global:
+  security:
+    allowInsecureImages: true
+
+# Bitnami Valkey configuration
+valkey:
+  enabled: true
+  
+  # Use Bitnami Legacy image
+  image:
+    registry: docker.io
+    repository: bitnami/valkey
+    tag: "latest"
+  
+  # Architecture: standalone or replication
+  architecture: standalone
+  
+  # Authentication disabled for local development
+  auth:
+    enabled: false
+  
+  # Master configuration
+  master:
+    service:
+      type: ClusterIP
+      port: 6379
+    
+    persistence:
+      enabled: false
+      size: 1Gi
+    
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  
+  # Replica configuration (for replication mode)
+  replica:
+    replicaCount: 0
+    persistence:
+      enabled: true
+      size: 8Gi
+    
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  
+  # Common configuration
+  commonConfiguration: |-
+    # Enable AOF persistence
+    appendonly yes
+    # Disable RDB snapshots for simplicity
+    save ""

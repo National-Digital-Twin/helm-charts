@@ -1,0 +1,169 @@
+# ============================================================================
+# Vault Component Values
+# ============================================================================
+# Controls the HashiCorp Vault sub-chart deployment and sidecar setup.
+# Vault is a core component — always enabled (like federator-server & client).
+#
+# PLACEHOLDER VALUES (must be set per environment):
+#   - vault.cloudProvider            → auto-derived from global.clusterType
+#                                       (eks→aws, aks→azure, gke→gcp)
+#                                       or set explicitly to override
+#   - vault.seal.*                              → Cloud-specific seal/unseal config
+#   - vault.serviceAccount.annotations          → Cloud-specific IAM annotations
+#   - vault.secretsManager.secretName           → Terraform output for secret storage
+# ============================================================================
+
+vault:
+  # Core component — always enabled
+  enabled: true
+
+  # ── Cloud Provider ──────────────────────────────────────────────────────────
+  # Derived automatically from global.clusterType (eks→aws, aks→azure, gke→gcp).
+  # Set explicitly here ONLY to override the auto-detection.
+  # Valid values: aws, azure, gcp  (empty string = derive from clusterType)
+  cloudProvider: ""
+
+  # ── Dev Mode ────────────────────────────────────────────────────────────────
+  # Vault dev mode for local (KIND) deployment.
+  # When true:
+  #   - Uses Shamir seal instead of cloud KMS auto-unseal
+  #   - Runs single-replica standalone (no HA Raft peers)
+  #   - Stores init credentials in a Kubernetes Secret (no cloud Secrets Manager)
+  #   - Skips cloud-specific validation checks
+  # Set to true in local.yaml for KIND clusters.
+  devMode: false
+
+  # ── HA Configuration ────────────────────────────────────────────────────────
+  ha:
+    replicas: 3
+
+  # ── Service Account ─────────────────────────────────────────────────────────
+  serviceAccount:
+    create: true
+    name: ""  # Defaults to <release>-vault-sa via helper
+    annotations: {}
+    # PLACEHOLDER: Set in environment override with cloud-specific IAM annotation
+    # AWS:   eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT_ID:role/..."
+    # Azure: azure.workload.identity/client-id: "CLIENT_ID"
+    # GCP:   iam.gke.io/gcp-service-account: "SA_NAME@PROJECT.iam.gserviceaccount.com"
+
+  # ── Seal / Auto-Unseal Configuration ────────────────────────────────────────
+  # Only the section matching vault.cloudProvider is used in the Raft config.
+  seal:
+    # AWS KMS auto-unseal
+    aws:
+      region: eu-west-2
+      # PLACEHOLDER: Set from Terraform output: fed_vault_kms_key_id
+      kmsKeyId: "PLACEHOLDER_KMS_KEY_ID"
+
+    # Azure Key Vault auto-unseal
+    azure:
+      tenantId: "PLACEHOLDER_TENANT_ID"
+      # PLACEHOLDER: Set from Terraform output
+      vaultName: "PLACEHOLDER_KEYVAULT_NAME"
+      keyName: "PLACEHOLDER_KEY_NAME"
+
+    # GCP Cloud KMS auto-unseal
+    gcp:
+      project: "PLACEHOLDER_PROJECT"
+      region: "europe-west2"
+      keyRing: "PLACEHOLDER_KEY_RING"
+      cryptoKey: "PLACEHOLDER_CRYPTO_KEY"
+
+  # ── Vault Server Configuration ──────────────────────────────────────────────
+  # Passed through to the official HashiCorp Vault sub-chart (v0.29.1).
+  # The Raft config is assembled at deploy time — override in environment files
+  # to inject the real seal stanza with actual key IDs.
+  vault:
+    global:
+      enabled: true
+    server:
+      enabled: true
+      image:
+        repository: hashicorp/vault
+        tag: "1.18.1"
+      ha:
+        enabled: true
+        replicas: 3
+        raft:
+          enabled: true
+          config: |
+            ui = true
+
+            listener "tcp" {
+              tls_disable = 1
+              address     = "[::]:8200"
+              cluster_address = "[::]:8201"
+            }
+
+            storage "raft" {
+              path = "/vault/data"
+            }
+
+            # ── Auto-unseal ──
+            # Default: AWS KMS. Override this entire config block in your
+            # environment override file with the correct seal stanza and key.
+            seal "awskms" {
+              region     = "eu-west-2"
+              kms_key_id = "PLACEHOLDER_KMS_KEY_ID"
+            }
+
+            service_registration "kubernetes" {}
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      dataStorage:
+        enabled: true
+        size: 10Gi
+      auditStorage:
+        enabled: true
+        size: 10Gi
+      extraContainers:
+        - name: vault-setup
+          image: "amazon/aws-cli:2.22.35"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "/scripts/vault-setup.sh"]
+          env:
+            - name: HOME
+              value: "/tmp"
+          volumeMounts:
+            - name: vault-setup-script
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: vault-setup-script
+          configMap:
+            name: vault-setup-script
+            defaultMode: 0555
+    # Vault UI — enabled for port-forward access
+    ui:
+      enabled: true
+      serviceType: ClusterIP
+    injector:
+      enabled: false
+    csi:
+      enabled: false
+
+  # ── Secrets Manager ─────────────────────────────────────────────────────────
+  # Where Vault root token + recovery keys are stored after init.
+  # AWS  → AWS Secrets Manager   (secretName = secret ID)
+  # Azure → Azure Key Vault      (secretName = vault name / secret name)
+  # GCP  → GCP Secret Manager    (secretName = projects/PROJECT/secrets/NAME)
+  secretsManager:
+    # PLACEHOLDER: Set from Terraform output per cloud
+    secretName: "PLACEHOLDER_SECRETS_MANAGER_NAME"
+
+  # ── Sidecar Setup Configuration ─────────────────────────────────────────────
+  setup:
+    enabled: true
+    cloudProvider: aws  # aws | azure | gcp | local
+    image:
+      repository: amazon/aws-cli
+      tag: "2.22.35"
+      pullPolicy: IfNotPresent
+    keyShares: 5
+    keyThreshold: 3

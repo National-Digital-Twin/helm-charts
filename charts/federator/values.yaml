@@ -1,0 +1,131 @@
+# SPDX-License-Identifier: Apache-2.0
+# © Crown Copyright 2025. This work has been developed by the National Digital Twin Programme and is legally attributed to the Department for Business and Trade (UK) as the governing entity.
+
+replicaCount: 1
+
+mode: server
+
+images:
+  server:
+    repository: ghcr.io/national-digital-twin/federator/federator-server
+    tag: 1.0.0
+  client:
+    repository: ghcr.io/national-digital-twin/federator/federator-client
+    tag: 1.0.0
+
+image:
+  repository: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 9001
+  annotations: {}
+  labels: {}
+
+config:
+  mountPath: /config
+  serverPropertiesFile: server.properties
+  clientPropertiesFile: client.properties
+  files: {}
+
+# Optional: render config at runtime from non-secret ConfigMap files + a small Secret of sensitive values.
+# When enabled, an initContainer copies `config.files` into `config.mountPath` and injects secret values.
+# This is useful for keeping large config Secrets small (or eliminating them) while still avoiding secrets in git.
+configRender:
+  enabled: false
+  image:
+    repository: busybox
+    tag: "1.36.1"
+  # Supply secret values to the initContainer.
+  #
+  # Option A (recommended): mount one or more *existing* Secrets via a projected volume.
+  # This avoids creating a combined Secret just for the federator chart.
+  # Each entry can optionally map keys to paths (filenames) under /secrets.
+  #
+  # Example:
+  # secretRefs:
+  #   - name: keycloak-management-node-client
+  #     items:
+  #       - key: client-secret
+  #         path: idp.client.secret
+  #   - name: oauth2-proxy-redis
+  #     items:
+  #       - key: redis-password
+  #         path: redis.password
+  secretRefs: []
+  # Option B (back-compat): name of a single Secret containing the sensitive values.
+  # If set, it will be mounted at /secrets with all keys exposed as files.
+  secretName: ""
+  # Optional: upsert key/value pairs into .properties files.
+  # Each mapping reads `secretKey` from the Secret and sets `property` in `file`.
+  properties: []
+  # Optional: simple placeholder replacement in files.
+  # Each mapping replaces all occurrences of `placeholder` in `file` with the value from `secretKey`.
+  replacements: []
+
+secretConfig:
+  create: false
+  name: ""
+  items: []
+  files: {}
+  annotations: {}
+
+javaOpts: ""
+args: ""
+
+extraEnv: []
+extraEnvFrom: []
+extraVolumes: []
+extraVolumeMounts: []
+
+# AWS MSK IAM Authentication
+# Enable this to automatically download and mount the AWS MSK IAM authentication library
+# Required when using AWS MSK with IAM authentication (SASL_SSL with AWS_MSK_IAM mechanism)
+mskIamAuth:
+  enabled: false
+  image: curlimages/curl:8.11.1
+  # URL to download the AWS MSK IAM auth JAR file
+  downloadUrl: "https://github.com/aws/aws-msk-iam-auth/releases/download/v2.3.0/aws-msk-iam-auth-2.3.0-all.jar"
+  jarFileName: "aws-msk-iam-auth-2.3.0-all.jar"
+  # Path where the library will be mounted (added to Java classpath)
+  libraryPath: "/library"
+  volumeName: "msk-lib"
+
+resources: {}
+
+livenessProbe: {}
+
+readinessProbe: {}
+
+startupProbe: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

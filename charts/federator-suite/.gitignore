@@ -1,0 +1,26 @@
+# Secrets - DO NOT COMMIT
+# values-secrets.yaml
+# values/overrides/*/secrets.yaml
+# values/overrides/*/secrets/*.yaml
+
+# Helm packaging
+*.tgz
+charts/*/charts/
+charts/*/*.tgz
+
+# Dependency charts
+requirements.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+#
+certs/

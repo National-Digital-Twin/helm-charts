@@ -1,0 +1,11 @@
+{{- if .Values.global.createNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    {{- if .Values.serviceMesh.istio.enabled }}
+    istio-injection: enabled
+    {{- end }}
+    {{- include "federator-suite.labels" . | nindent 4 }}
+{{- end }}

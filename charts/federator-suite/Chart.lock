@@ -1,0 +1,12 @@
+dependencies:
+- name: kafka
+  repository: https://charts.bitnami.com/bitnami
+  version: 31.0.0
+- name: valkey
+  repository: file://charts/valkey
+  version: 0.1.0
+- name: vault
+  repository: file://charts/vault
+  version: 0.1.0
+digest: sha256:f7d1a0f0a40f1a7d41db44db07b59c53cc082dc33fcbd7e5b980290d0c248bdc
+generated: "2026-03-27T11:41:28.548504384Z"

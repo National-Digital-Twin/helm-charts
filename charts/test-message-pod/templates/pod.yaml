@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "test-message-pod.fullname" . }}
+  labels:
+    {{- include "test-message-pod.labels" . | nindent 4 }}
+    {{- with .Values.podLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.podAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  serviceAccountName: {{ include "test-message-pod.serviceAccountName" . }}
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.podSecurityContext }}
+  securityContext:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  containers:
+  - name: curl
+    {{- with .Values.securityContext }}
+    securityContext:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+    imagePullPolicy: {{ .Values.image.pullPolicy }}
+    command: ["/bin/sh"]
+    args: ["-c", "sleep infinity"]
+    {{- with .Values.resources }}
+    resources:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    env:
+    - name: KAFKA_HOME
+      value: {{ .Values.kafka.home | quote }}
+    - name: KAFKA_BOOTSTRAP_SERVER
+      value: {{ .Values.kafka.bootstrapServer | quote }}
+    - name: KAFKA_TOPIC
+      value: {{ .Values.kafka.topic | quote }}
+    - name: KAFKA_SECURITY_PROTOCOL
+      value: {{ .Values.kafka.securityProtocol | quote }}
+    - name: KAFKA_SASL_MECHANISM
+      value: {{ .Values.kafka.saslMechanism | quote }}
+    - name: MESSAGE_CONTENT_TYPE
+      value: {{ .Values.message.headers.contentType | quote }}
+    - name: MESSAGE_SECURITY_LABEL
+      value: {{ .Values.message.headers.securityLabel | quote }}
+    {{- if .Values.kafkaCredentialsSecret.enabled }}
+    volumeMounts:
+    - name: kafka-credentials
+      mountPath: /opt/kafka/config
+      readOnly: true
+    {{- if .Values.script.enabled }}
+    - name: scripts
+      mountPath: /opt/scripts
+      readOnly: true
+    {{- end }}
+    {{- if contains "SSL" .Values.kafka.securityProtocol }}
+    - name: kafka-truststore
+      mountPath: /opt/kafka/truststore
+      readOnly: true
+    {{- end }}
+    {{- end }}
+  restartPolicy: Always
+  {{- if or .Values.kafkaCredentialsSecret.enabled .Values.script.enabled }}
+  volumes:
+  {{- if .Values.kafkaCredentialsSecret.enabled }}
+  - name: kafka-credentials
+    secret:
+      secretName: {{ .Values.kafkaCredentialsSecret.name }}
+      items:
+      - key: kafka-config.properties
+        path: kafka-config.properties
+  {{- if contains "SSL" .Values.kafka.securityProtocol }}
+  - name: kafka-truststore
+    secret:
+      secretName: {{ .Values.kafkaCredentialsSecret.name }}
+      items:
+      - key: truststore.jks
+        path: kafka-truststore.jks
+  {{- end }}
+  {{- end }}
+  {{- if .Values.script.enabled }}
+  - name: scripts
+    configMap:
+      name: {{ include "test-message-pod.fullname" . }}-scripts
+      defaultMode: 0755
+  {{- end }}
+  {{- end }}
+  {{- with .Values.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.affinity }}
+  affinity:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}

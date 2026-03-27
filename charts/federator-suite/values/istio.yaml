@@ -1,0 +1,42 @@
+# Istio Configuration (single switch)
+# Set serviceMesh.istio.enabled=true to deploy all Istio resources.
+
+serviceMesh:
+  istio:
+    enabled: false  # Single switch for Istio mode
+    
+    # Gateway configuration
+    gateway:
+      name: ia-federator-ingress-gateway
+      selector:
+        app: istio-ingress-passthrough
+      hosts:
+        - "ia-federator-{{ .Values.global.orgName }}.local"
+    
+    # VirtualService configuration
+    virtualService:
+      name: federator-vs
+      hosts:
+        - "ia-federator-{{ .Values.global.orgName }}.local"
+      gatewayRefs:
+        - ia-federator-ingress-gateway
+    
+    # DestinationRule configuration
+    destinationRule:
+      name: federator-server-dr
+    
+    # PeerAuthentication
+    peerAuthentication:
+      mode: STRICT  # or PERMISSIVE
+    
+    # AuthorizationPolicy
+    authorizationPolicy:
+      denyByDefault: false
+      # Allow traffic from specific service accounts (SPIFFE identity)
+      allowedServiceAccounts:
+        - cluster.local/ns/istio-ingress/sa/istio-ingress
+      # Allow traffic from specific namespaces
+      allowedNamespaces:
+        - ia-federation
+        - istio-ingress
+        - ia-management-node
