@@ -24,13 +24,13 @@ This chart has been developed to provide a simple example for deploying a MongoD
 > The installation assumes that Istio has already been installed Istio, following the [Istio Helm Install](https://istio.io/latest/docs/setup/install/helm/) guide, and assumes a default principal of `cluster.local/ns/istio-system/sa/ingressgateway`, and default gateway of `istio-system/istio-gateway`. 
 
 ```sh
-helm install my-release oci://ghcr.io/national-digital-twin/helm/ia-node-mongodb -n ia-node
+helm install my-release oci://ghcr.io/national-node-net/helm/ia-node-mongodb -n ia-node
 ```
 
 Optionally, use an overrides.yaml:
 
 ```sh
-helm install my-release oci://ghcr.io/national-digital-twin/helm/ia-node-mongodb -n ia-node -f ./overrides.yaml 
+helm install my-release oci://ghcr.io/national-node-net/helm/ia-node-mongodb -n ia-node -f ./overrides.yaml 
 ```
 
 ## Prerequisites  
@@ -83,13 +83,13 @@ kubectl label namespace ia-node istio-injection=enabled
 Install the latest chart:  
 
 ```sh
-helm install ia-node-mongodb oci://ghcr.io/national-digital-twin/helm/ia-node-mongodb -n ia-node
+helm install ia-node-mongodb oci://ghcr.io/national-node-net/helm/ia-node-mongodb -n ia-node
 ```
 
 Optionally, use an overrides.yaml:
 
 ```sh
-helm install ia-node-mongodb oci://ghcr.io/national-digital-twin/helm/ia-node-mongodb -n ia-node -f ./overrides.yaml 
+helm install ia-node-mongodb oci://ghcr.io/national-node-net/helm/ia-node-mongodb -n ia-node -f ./overrides.yaml 
 ```
 
 To quickly view the database running, setup a port forward.
@@ -134,7 +134,7 @@ This chart provides a few options for managing the default secrets.
 Override the secret value you pass to the chart on a Helm install/upgrade.
 
 ```sh
-helm upgrade ia-node-mongodb oci://ghcr.io/national-digital-twin/helm/ia-node-mongodb -n ia-node \
+helm upgrade ia-node-mongodb oci://ghcr.io/national-node-net/helm/ia-node-mongodb -n ia-node \
   --set mongodb.secret.password=ADD_YOUR_PASSWORD_HERE 
 ```
 
@@ -169,7 +169,7 @@ kubectl apply -f ./mongdbsecret.yaml -n ia-node
 Lastly, override the values on the install/upgrade: 
 
 ```sh 
-helm upgrade ia-node-mongodb oci://ghcr.io/national-digital-twin/helm/ia-node-mongodb -n ia-node \
+helm upgrade ia-node-mongodb oci://ghcr.io/national-node-net/helm/ia-node-mongodb -n ia-node \
 --set mongodb.secret.create=false \
 --set mongodb.secret.name=user-password
 ```

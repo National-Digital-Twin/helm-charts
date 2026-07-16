@@ -11,10 +11,10 @@ case $INSTALL_TYPE in
         Directory="./helm-charts/charts"
         ;;
     "test_package")
-        Directory="oci://ghcr.io/national-digital-twin/helm-test"
+        Directory="oci://ghcr.io/national-node-net/helm-test"
         ;;
     *)
-        Directory="oci://ghcr.io/national-digital-twin/helm"
+        Directory="oci://ghcr.io/national-node-net/helm"
         ;;
 esac
 

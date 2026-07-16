@@ -23,7 +23,7 @@ on:
 env:
   CHART_DIR: ./charts/
   PACKAGE_NAME: federator-suite
-  REGISTRY: ${{ github.ref == 'refs/heads/main' && 'ghcr.io/national-digital-twin/helm' || 'ghcr.io/national-digital-twin/helm-test' }}
+  REGISTRY: ${{ github.ref == 'refs/heads/main' && 'ghcr.io/national-node-net/helm' || 'ghcr.io/national-node-net/helm-test' }}
   VALUES_FILES: >-
     -f values/common-values.yaml
     -f values/kafka.yaml

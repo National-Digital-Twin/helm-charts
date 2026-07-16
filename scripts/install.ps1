@@ -8,8 +8,8 @@ $InstallOperators=$false
 
 switch ($InstallType) {
     "local_dev"     {$Directory="./helm-charts/charts" } ## for developing the and editing the charts
-    "test_package"  {$Directory="oci://ghcr.io/national-digital-twin/helm-test"} ## for deployment with the test packages
-    default         {$Directory="oci://ghcr.io/national-digital-twin/helm"} ## for default deployment using the live public packages
+    "test_package"  {$Directory="oci://ghcr.io/national-node-net/helm-test"} ## for deployment with the test packages
+    default         {$Directory="oci://ghcr.io/national-node-net/helm"} ## for default deployment using the live public packages
  }
 
 kubectl create namespace $Namespace

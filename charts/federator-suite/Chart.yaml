@@ -4,7 +4,7 @@ description: Helm chart for Federator application suite (client, server, kafka, 
 type: application
 version: 0.2.0
 appVersion: "0.4.1"
-home: https://github.com/national-digital-twin/helm-charts
+home: https://github.com/national-node-net/helm-charts
 maintainers:
   - name: National Digital Twin Programme
     email: contact@ndtp.gov.uk

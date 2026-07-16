@@ -6,7 +6,7 @@ This chart deploys the management-node service as a Kubernetes Deployment expose
 
 - Kubernetes 1.25+
 - Helm 3.12+
-- Access to pull `ghcr.io/national-digital-twin/management-node` images (authenticate to GHCR if required)
+- Access to pull `ghcr.io/national-node-net/management-node` images (authenticate to GHCR if required)
 
 ## Quick Start
 
@@ -20,7 +20,7 @@ To override the image reference or tag:
 
 ```bash
 helm install management-node ./charts/management-node \
-  --set image.repository=ghcr.io/national-digital-twin/management-node \
+  --set image.repository=ghcr.io/national-node-net/management-node \
   --set image.tag=1.0.1
 ```
 
@@ -41,7 +41,7 @@ helm uninstall management-node
 | Key | Default | Description |
 | --- | --- | --- |
 | `replicaCount` | `1` | Number of pods in the deployment. |
-| `image.repository` | `ghcr.io/national-digital-twin/management-node` | Container image repository. |
+| `image.repository` | `ghcr.io/national-node-net/management-node` | Container image repository. |
 | `image.tag` | `1.0.1` | Container image tag. |
 | `image.pullPolicy` | `IfNotPresent` | Image pull policy for the container. |
 | `serviceAccount.create` | `true` | Whether to create a dedicated ServiceAccount. |

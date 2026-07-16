@@ -13,7 +13,7 @@ The Helm chart `federator` deploys the NDTP Federator application, which can run
 
 The Federator is an open-source component developed as part of the National Digital Twin Programme (NDTP) to support secure data federation and sharing across organisations.
 
-[Overview of Federator](https://github.com/National-Digital-Twin/integration-architecture-documentation)
+[Overview of Federator](https://github.com/National-Node-Net/integration-architecture-documentation)
 
 > [!IMPORTANT]  
 > Secrets management is outside of the scope of the deployment. However, we have provided several options for managing secrets, including the `configRender` feature that allows you to keep sensitive values in existing Kubernetes Secrets while maintaining configuration files in ConfigMaps.
@@ -23,7 +23,7 @@ The Federator is an open-source component developed as part of the National Digi
 ### Server Mode
 
 ```sh
-helm install federator-server oci://ghcr.io/national-digital-twin/helm/federator -n federator \
+helm install federator-server oci://ghcr.io/national-node-net/helm/federator -n federator \
 --set mode=server \
 --create-namespace
 ```
@@ -31,7 +31,7 @@ helm install federator-server oci://ghcr.io/national-digital-twin/helm/federator
 ### Client Mode
 
 ```sh
-helm install federator-client oci://ghcr.io/national-digital-twin/helm/federator -n federator \
+helm install federator-client oci://ghcr.io/national-node-net/helm/federator -n federator \
 --set mode=client \
 --set service.enabled=false \
 --create-namespace
@@ -40,7 +40,7 @@ helm install federator-client oci://ghcr.io/national-digital-twin/helm/federator
 Optionally, use an overrides file:
 
 ```sh
-helm install federator oci://ghcr.io/national-digital-twin/helm/federator -n federator -f ./overrides.yaml 
+helm install federator oci://ghcr.io/national-node-net/helm/federator -n federator -f ./overrides.yaml 
 ```
 
 ## Prerequisites  
@@ -77,7 +77,7 @@ kubectl create namespace federator
 Install the chart in server mode to expose a gRPC service:
 
 ```sh
-helm install federator-server oci://ghcr.io/national-digital-twin/helm/federator -n federator \
+helm install federator-server oci://ghcr.io/national-node-net/helm/federator -n federator \
 --set mode=server
 ```
 
@@ -86,7 +86,7 @@ helm install federator-server oci://ghcr.io/national-digital-twin/helm/federator
 Install the chart in client mode to consume from remote servers:
 
 ```sh
-helm install federator-client oci://ghcr.io/national-digital-twin/helm/federator -n federator \
+helm install federator-client oci://ghcr.io/national-node-net/helm/federator -n federator \
 --set mode=client \
 --set service.enabled=false
 ```
@@ -267,10 +267,10 @@ The chart uses separate image repositories for server and client modes:
 ```yaml
 images:
   server:
-    repository: ghcr.io/national-digital-twin/federator/federator-server
+    repository: ghcr.io/national-node-net/federator/federator-server
     tag: 1.0.0
   client:
-    repository: ghcr.io/national-digital-twin/federator/federator-client
+    repository: ghcr.io/national-node-net/federator/federator-client
     tag: 1.0.0
 
 image:
@@ -420,9 +420,9 @@ args: "--debug --verbose"
 
 | Name                        | Description                     | Value                                                      |
 | --------------------------- | ------------------------------- | ---------------------------------------------------------- |
-| `images.server.repository`  | Server mode image repository    | `ghcr.io/national-digital-twin/federator/federator-server` |
+| `images.server.repository`  | Server mode image repository    | `ghcr.io/national-node-net/federator/federator-server` |
 | `images.server.tag`         | Server mode image tag           | `1.0.0`                                                    |
-| `images.client.repository`  | Client mode image repository    | `ghcr.io/national-digital-twin/federator/federator-client` |
+| `images.client.repository`  | Client mode image repository    | `ghcr.io/national-node-net/federator/federator-client` |
 | `images.client.tag`         | Client mode image tag           | `1.0.0`                                                    |
 | `image.repository`          | Override image repository       | `""`                                                       |
 | `image.tag`                 | Override image tag              | `""`                                                       |

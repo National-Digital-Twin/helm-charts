@@ -7,10 +7,10 @@ mode: server
 
 images:
   server:
-    repository: ghcr.io/national-digital-twin/federator/federator-server
+    repository: ghcr.io/national-node-net/federator/federator-server
     tag: 1.0.0
   client:
-    repository: ghcr.io/national-digital-twin/federator/federator-client
+    repository: ghcr.io/national-node-net/federator/federator-client
     tag: 1.0.0
 
 image:
