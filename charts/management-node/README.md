@@ -41,7 +41,7 @@ helm uninstall management-node
 | Key | Default | Description |
 | --- | --- | --- |
 | `replicaCount` | `1` | Number of pods in the deployment. |
-| `image.repository` | `ghcr.io/national-node-net/management-node` | Container image repository. |
+| `image.repository` | `ghcr.io/national-node-net/management-node/management-node` | Container image repository. |
 | `image.tag` | `1.0.1` | Container image tag. |
 | `image.pullPolicy` | `IfNotPresent` | Image pull policy for the container. |
 | `serviceAccount.create` | `true` | Whether to create a dedicated ServiceAccount. |
