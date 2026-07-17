@@ -6,7 +6,7 @@ This chart deploys the management-node service as a Kubernetes Deployment expose
 
 - Kubernetes 1.25+
 - Helm 3.12+
-- Access to pull `ghcr.io/national-node-net/management-node` images (authenticate to GHCR if required)
+- Access to pull `ghcr.io/national-node-net/management-node/management-node` images (authenticate to GHCR if required)
 
 ## Quick Start
 
