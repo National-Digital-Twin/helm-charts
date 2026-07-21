@@ -87,7 +87,7 @@ apps:
       replicas: 1
       containerPort: 8080
       image:
-        repository: ghcr.io/national-digital-twin/ianode-access
+        repository: ghcr.io/national-node-net/ianode-access
         tag: 0.90.0
       resources:
         limits:
@@ -131,7 +131,7 @@ apps:
       replicas: 1
       containerPort: 80
       image:
-        repository: ghcr.io/national-digital-twin/access-ui ### currently unsupported and just a placeholder only
+        repository: ghcr.io/national-node-net/access-ui ### currently unsupported and just a placeholder only
         tag: latest
       resources:
         limits:
@@ -185,7 +185,7 @@ apps:
         prometheus.io/scrape: "true"
       replicas: 1
       image:
-        repository: ghcr.io/national-digital-twin/secure-agent-graph
+        repository: ghcr.io/national-node-net/secure-agent-graph
         tag: 0.90.0
       ports:
       - name: http
@@ -290,7 +290,7 @@ apps:
       replicas: 1
       containerPort: 8080
       image:
-        repository: ghcr.io/national-digital-twin/query-ui ### currently unsupported and just a placeholder only
+        repository: ghcr.io/national-node-net/query-ui ### currently unsupported and just a placeholder only
         tag: latest
       resources:
         limits:

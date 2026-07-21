@@ -33,13 +33,13 @@ This chart has been developed to provide an example for deploying oAuth2 Proxy, 
 > You can either generate a secret called `oauth2-proxy-default` yourself, or secret creation to true as below with your [cookie secret](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview/) and keycloak client id and secret which will generate a secret for you. The config map and optional secret output from the package, can then be used to override the oauth2 Proxy installation. 
 
 ```sh
-helm install ia-node-oidc oci://ghcr.io/national-digital-twin/helm/ia-node-oidc -n ia-node --set oidcProvider.configMap.redirect_url=https://localhost/oauth2/callback --set istio.virtualService.hosts[0]="localhost"
+helm install ia-node-oidc oci://ghcr.io/national-node-net/helm/ia-node-oidc -n ia-node --set oidcProvider.configMap.redirect_url=https://localhost/oauth2/callback --set istio.virtualService.hosts[0]="localhost"
 ```
 
 Optionally, use an overrides.yaml:
 
 ```sh
-helm install my-release oci://ghcr.io/national-digital-twin/helm/ia-node-oidc -n ia-node -f ./overrides.yaml 
+helm install my-release oci://ghcr.io/national-node-net/helm/ia-node-oidc -n ia-node -f ./overrides.yaml 
 ```
 
 ## Prerequisites
@@ -65,7 +65,7 @@ Versions highlighted are based on what configurations have been used throughout 
   - [`oAuth2Proxy`](https://oauth2-proxy.github.io/oauth2-proxy/): a reverse proxy that should be deployed and integrated with Istio service mesh to provide authentication using a target OpenID Connect (OIDC) Identity Provider, this install used [`Bitnami oAuth2 Proxy Helm chart 6.2.10`](https://github.com/bitnami/charts/blob/main/bitnami/oauth2-proxy/README.md), which also installs [`Redis`](https://redis.io/) a session storage option that can be used with oAuth2Proxy
 
 > [!NOTE]
-> The application itself has also been tested with Cognito in place of Keycloak [see here](https://github.com/National-Digital-Twin/integration-architecture-documentation/blob/main/DeveloperDocumentation/Deployment/deployment-local.md). 
+> The application itself has also been tested with Cognito in place of Keycloak [see here](https://github.com/National-Node-Net/integration-architecture-documentation/blob/main/DeveloperDocumentation/Deployment/deployment-local.md). 
   
 ## Installing the Chart
 
@@ -86,13 +86,13 @@ kubectl label namespace ia-node istio-injection=enabled
 Install the latest chart using the following.  
 
 ```sh
-helm install ia-node-oidc oci://ghcr.io/national-digital-twin/helm/ia-node-oidc -n ia-node --set oidcProvider.configMap.redirect_url=https://localhost/oauth2/callback
+helm install ia-node-oidc oci://ghcr.io/national-node-net/helm/ia-node-oidc -n ia-node --set oidcProvider.configMap.redirect_url=https://localhost/oauth2/callback
 ```
 
 Optionally, use an overrides.yaml:
 
 ```sh
-helm install ia-node-oidc oci://ghcr.io/national-digital-twin/helm/ia-node-oidc -n ia-node-oidc -f ./overrides.yaml 
+helm install ia-node-oidc oci://ghcr.io/national-node-net/helm/ia-node-oidc -n ia-node-oidc -f ./overrides.yaml 
 ```
 
 Next install oAuth2Proxy, the example below uses the [Bitnami oAuth2 Proxy Helm chart](https://github.com/bitnami/charts/blob/main/bitnami/oauth2-proxy/README.md), however [oAuth2 Proxy](https://oauth2-proxy.github.io/oauth2-proxy/installation) do provide a Helm chart option directly from the core documentation. 
@@ -203,7 +203,7 @@ The payload content should contain email and groups, as shown in the example bel
 }
 ```
 
-There are some examples of Cognito covered in the [documents repository](https://github.com/National-Digital-Twin/integration-architecture-documentation/blob/main/DeveloperDocumentation/Deployment/deployment-local.md).
+There are some examples of Cognito covered in the [documents repository](https://github.com/National-Node-Net/integration-architecture-documentation/blob/main/DeveloperDocumentation/Deployment/deployment-local.md).
 
 The rest of this section is to provide a bit of a quick guide example for a basic Key Cloak configuration. 
 

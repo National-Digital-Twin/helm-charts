@@ -13,7 +13,7 @@ This is aimed at being an easy set up for local/dev and should NOT be used `as i
 > Secrets management is outside of the scope of the deployment, however we have provided a few possible examples on how you might override the default values, or provide your own where supported.
 
 >```sh
->git clone https://github.com/National-Digital-Twin/helm-charts.git
+>git clone https://github.com/National-Node-Net/helm-charts.git
 >cd helm-charts
 >```
 
@@ -160,7 +160,7 @@ kubectl -n keycloak create secret generic keycloak-management-node-client --from
 Deploy the [ia-node-oidc](./charts/ia-node-oidc/README.md) helper chart to help with setting up an OIDC conformant Identity Provider (IdP) to work with the IA Node setup.
 
 ```sh
-helm install ia-node-oidc oci://ghcr.io/national-digital-twin/helm/ia-node-oidc -n org-a --set oidcProvider.configMap.redirect_url="http://localhost/oauth2/callback" --set istio.authorizationPolicy.enabled=false
+helm install ia-node-oidc oci://ghcr.io/national-node-net/helm/ia-node-oidc -n org-a --set oidcProvider.configMap.redirect_url="http://localhost/oauth2/callback" --set istio.authorizationPolicy.enabled=false
 ```
 >[!NOTE]
 > if this fails with errors, like 
@@ -201,7 +201,7 @@ Deploy the [ia-node-mongodb](./charts/ia-node-mongodb/README.md) helper chart to
 
 Note: The below --set commands are optional and configured for small environments
 ```sh
-helm install ia-node-mongodb oci://ghcr.io/national-digital-twin/helm/ia-node-mongodb -n org-a \
+helm install ia-node-mongodb oci://ghcr.io/national-node-net/helm/ia-node-mongodb -n org-a \
   --set mongodb.spec.members=1 
 ```
 
@@ -255,7 +255,7 @@ Deploy the [ia-node-kafka](./charts/ia-node-kafka/README.md) helper chart for us
 Note: The chart defaults to Kafka 4.1.0 with KRaft mode (no ZooKeeper) and single broker/controller for small environments. Use the local chart path if you have made local modifications:
 ```sh
 # For published chart:
-helm install ia-node-kafka oci://ghcr.io/national-digital-twin/helm/ia-node-kafka -n org-a 
+helm install ia-node-kafka oci://ghcr.io/national-node-net/helm/ia-node-kafka -n org-a 
 ```
 ```sh
 # For local chart with Kafka 4.1.0 support:
@@ -490,7 +490,7 @@ helm upgrade --install management-node ./charts/management-node \
   --set app.datasource.secret.password=${POSTGRESS_PASSWORD} \
   --set app.datasource.secret.create=true \
   --set app.datasource.url=jdbc:postgresql://management-postgres-postgresql.central-org.svc.cluster.local:5432/management_node \
-  --set image.repository=ghcr.io/national-digital-twin/management-node/management-node \
+  --set image.repository=ghcr.io/national-node-net/management-node/management-node \
   --set image.tag=1.0.1 \
   --set app.ssl.enabled=false \
   --set app.oauth2.resourceserver.jwt.issuerUri=http://keycloak.keycloak.svc.cluster.local/realms/management-node \

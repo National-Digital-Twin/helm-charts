@@ -11,7 +11,7 @@ The Helm chart `ia-node` is intended to deploy the basic IA Node application com
 
 IA Node (Integration Architecture Node), is an open-source digital component developed as part of the National Digital Twin Programme (NDTP) to support managing and sharing information across organisations, the package `ia-node` intends to ease first time deployments for testing. 
 
-[Overview of IA Node](https://github.com/National-Digital-Twin/integration-architecture-documentation)
+[Overview of IA Node](https://github.com/National-Node-Net/integration-architecture-documentation)
 
 > [!IMPORTANT]  
 > Secrets management is outside of the scope of the deployment, however, we have provided a few possible examples on how you might override the default values or provide your own where supported.
@@ -22,7 +22,7 @@ IA Node (Integration Architecture Node), is an open-source digital component dev
 > The installation assumes that Istio has already been installed Istio, following the [Istio Helm Install](https://istio.io/latest/docs/setup/install/helm/) guide, and assumes a default principal of `cluster.local/ns/istio-system/sa/ingressgateway`, and default gateway of `istio-system/istio-gateway`. It is also assumed that you have Istio installed and you have configured an Istio gateway using the default setup and then in addition configured a mesh config or envoy filter to handle the redirection of OAuth2 Proxy, configured with an OIDC provider. In addition you should also have a MongoDB and Kafka installation which is assumed for the default install i.e. `mongodb-svc:27017` and `kafka-cluster-kafka-bootstrap.ia-node-kafka.svc:9093` respectively using secret names of `ia-node-user-password` and `kafka-auth-config` respectively. These can all be overridden in the values as required, along with any other requirements if you are hosting these services externally. 
 
 ```sh
-helm install my-release oci://ghcr.io/national-digital-twin/helm/ia-node -n ia-node \
+helm install my-release oci://ghcr.io/national-node-net/helm/ia-node -n ia-node \
 --set apps.api.configMap.data.DEPLOYED_DOMAIN="http://localhost" \
 --set apps.api.configMap.data.OPENID_PROVIDER_URL="http://keycloak.keycloak.svc.cluster.local/realms/ianode/" \
 --set apps.graph.configMap.data.JWKS_URL="http://keycloak.keycloak.svc.cluster.local/realms/ianode/.well-known/openid-configuration" \
@@ -32,7 +32,7 @@ helm install my-release oci://ghcr.io/national-digital-twin/helm/ia-node -n ia-n
 Optionally, use an overrides.yaml:
 
 ```sh
-helm install my-release oci://ghcr.io/national-digital-twin/helm/ia-node -n ia-node -f ./overrides.yaml 
+helm install my-release oci://ghcr.io/national-node-net/helm/ia-node -n ia-node -f ./overrides.yaml 
 ```
 
 ## Prerequisites  
@@ -77,7 +77,7 @@ kubectl label namespace ia-node istio-injection=enabled
 Install the latest chart using the following:  
 
 ```sh
-helm install ia-node oci://ghcr.io/national-digital-twin/helm/ia-node -n ia-node \
+helm install ia-node oci://ghcr.io/national-node-net/helm/ia-node -n ia-node \
 --set apps.api.configMap.data.DEPLOYED_DOMAIN="http://localhost" \
 --set apps.api.configMap.data.OPENID_PROVIDER_URL="http://keycloak.keycloak.svc.cluster.local/realms/ianode/" \
 --set apps.graph.configMap.data.JWKS_URL="http://keycloak.keycloak.svc.cluster.local/realms/ianode/.well-known/openid-configuration" \
@@ -87,7 +87,7 @@ helm install ia-node oci://ghcr.io/national-digital-twin/helm/ia-node -n ia-node
 Optionally, use an overrides.yaml:
 
 ```sh
-helm install ia-node oci://ghcr.io/national-digital-twin/helm/ia-node -n ia-node -f ./overrides.yaml 
+helm install ia-node oci://ghcr.io/national-node-net/helm/ia-node -n ia-node -f ./overrides.yaml 
 ```
 
 ## Uninstall the Chart
@@ -198,7 +198,7 @@ This chart provides a few options for managing the default secrets.
 Override the secret value you pass to the chart with a Helm install/upgrade. 
 
 ```sh
-helm upgrade ia-node oci://ghcr.io/national-digital-twin/helm/ia-node -n ia-node --set mongodb.secret.password=ADD_YOUR_PASSWORD_HERE 
+helm upgrade ia-node oci://ghcr.io/national-node-net/helm/ia-node -n ia-node --set mongodb.secret.password=ADD_YOUR_PASSWORD_HERE 
 ```
 
 Verify the default is now configured by running: 
@@ -234,7 +234,7 @@ kubectl apply -f ./mongdbsecret.yaml -n ia-node
 Lastly override the values on the install/upgrade as below. 
 
 ```sh
-helm upgrade ia-node oci://ghcr.io/national-digital-twin/helm/ia-node -n ia-node \
+helm upgrade ia-node oci://ghcr.io/national-node-net/helm/ia-node -n ia-node \
 --set mongodb.secret.create=false \
 --set mongodb.secret.name=bring-your-own-mongdb-secret-reference
 ```
@@ -275,7 +275,7 @@ extraCerts:
 
 #### Referencing Alternative or Private Registries for Images
 
-All images are all published to a the National Digital Twin Programme GitHub Registry see [here](https://github.com/orgs/National-Digital-Twin/packages?ecosystem=container). 
+All images are all published to a the National Digital Twin Programme GitHub Registry see [here](https://github.com/orgs/National-Node-Net/packages?ecosystem=container). 
 
 Some teams, may wish to sync images to another registry they host or sync to a registry that is already integrated with their desired target environment cluster, however others may wish to use the private github registry directly.
 
@@ -289,7 +289,7 @@ You will require an access token with at least "read only" access either
 Then log in to the target registry as follows. 
 
 ```sh
- docker login -u user ghcr.io/national-digital-twin -p $token
+ docker login -u user ghcr.io/national-node-net -p $token
 ```
 
 This should generate a config i.e. .docker/config.json you can view the contents using 
@@ -311,7 +311,7 @@ If you can't find a config you can also do this directly
 
 ```sh
 kubectl create secret docker-registry private-registry \
---docker-server=ghcr.io/national-digital-twin \
+--docker-server=ghcr.io/national-node-net \
 --docker-username=user \
 --docker-password=$token \
 --docker-email=user@yourdomain \
@@ -402,7 +402,7 @@ imagePullSecrets:
 | Name                                 | Description                                              | Value                                       |
 | ------------------------------------ | -------------------------------------------------------- | ------------------------------------------- |
 | apps.api.enabled                     | toggled the component to be deployed or not              | true                                        |
-| apps.api.deployment.image.repository | default image repository                                 | ghcr.io/national-digital-twin/ianode-access |
+| apps.api.deployment.image.repository | default image repository                                 | ghcr.io/national-node-net/ianode-access |
 | apps.api.deployment.image.tag        | default image tag                                        | 0.90.0                                      |
 | apps.api.configMap.data              | config map overrides, only the ones listed are mandatory | DEPLOYED_DOMAIN, OPENID_PROVIDER_URL        |
 
@@ -413,7 +413,7 @@ Note: currently access-ui image is not supported yet.
 | Name                                | Description                                              | Value                                   |
 | ----------------------------------- | -------------------------------------------------------- | --------------------------------------- |
 | apps.ui.enabled                     | toggled the component to be deployed or not              | false                                   |
-| apps.ui.deployment.image.repository | default image repository                                 | ghcr.io/national-digital-twin/access-ui |
+| apps.ui.deployment.image.repository | default image repository                                 | ghcr.io/national-node-net/access-ui |
 | apps.ui.deployment.image.tag        | default image tag                                        | latest                                  |
 | apps.ui.configMap.data              | config map overrides, only the ones listed are mandatory | env-config.js                           |
 
@@ -422,7 +422,7 @@ Note: currently access-ui image is not supported yet.
 | Name                                  | Description                                              | Value                                                                  |
 | ------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------- |
 | apps.api.graph                        | toggled the component to be deployed or not              | true                                                                   |
-| apps.api.statefulSet.image.repository | default image repository                                 | ghcr.io/national-digital-twin/secure-agent-graph                       |
+| apps.api.statefulSet.image.repository | default image repository                                 | ghcr.io/national-node-net/secure-agent-graph                       |
 | apps.api.statefulSet.image.tag        | default image tag                                        | 0.90.0                                                                 |
 | apps.api.configMap.data               | config map overrides, only the ones listed are mandatory | ATTRIBUTE_HIERARCHY_URL, JWKS_URL, SEARCH_API_URL, USER_ATTRIBUTES_URL |
 
@@ -433,7 +433,7 @@ Note: currently query-ui image is not supported yet.
 | Name                                   | Description                                              | Value                                  |
 | -------------------------------------- | -------------------------------------------------------- | -------------------------------------- |
 | apps.graph.enabled                     | toggled the component to be deployed or not              | false                                  |
-| apps.graph.deployment.image.repository | default image repository                                 | ghcr.io/national-digital-twin/query-ui |
+| apps.graph.deployment.image.repository | default image repository                                 | ghcr.io/national-node-net/query-ui |
 | apps.graph.deployment.image.tag        | default image tag                                        | latest                                 |
 | apps.graph.configMap.data              | config map overrides, only the ones listed are mandatory | env-config.js                          |
 
