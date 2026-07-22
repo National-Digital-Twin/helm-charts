@@ -23,7 +23,7 @@ on:
 env:
   CHART_DIR: ./charts/
   PACKAGE_NAME: ia-node-kafka
-  REGISTRY: ${{ github.ref == 'refs/heads/main' && 'ghcr.io/national-digital-twin/helm' || 'ghcr.io/national-digital-twin/helm-test' }}
+  REGISTRY: ${{ github.ref == 'refs/heads/main' && 'ghcr.io/national-node-net/helm' || 'ghcr.io/national-node-net/helm-test' }}
 
 jobs:
   check:

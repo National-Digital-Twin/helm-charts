@@ -24,13 +24,13 @@ This chart has been developed to provide an example deployment of a Kafka Cluste
 > The installation assumes that Istio has already been installed Istio, following the [Istio Helm Install](https://istio.io/latest/docs/setup/install/helm/) guide, and assumes a default principal of `cluster.local/ns/istio-system/sa/ingressgateway`, and default gateway of `istio-system/istio-gateway`.
 
 ```sh
-helm install my-release oci://ghcr.io/national-digital-twin/helm/ia-node-kafka -n ia-node
+helm install my-release oci://ghcr.io/national-node-net/helm/ia-node-kafka -n ia-node
 ```
 
 Optionally, use an overrides.yaml:
 
 ```sh
-helm install my-release oci://ghcr.io/national-digital-twin/helm/ia-node-kafka -n ia-node -f ./overrides.yaml 
+helm install my-release oci://ghcr.io/national-node-net/helm/ia-node-kafka -n ia-node -f ./overrides.yaml 
 ```
 
 ## Prerequisites
@@ -83,13 +83,13 @@ kubectl label namespace ia-node istio-injection=enabled
 Install the latest chart (defaults to Kafka 4.1.0 with KRaft mode for small environments): 
 
 ```sh
-helm install ia-node-kafka oci://ghcr.io/national-digital-twin/helm/ia-node-kafka -n ia-node
+helm install ia-node-kafka oci://ghcr.io/national-node-net/helm/ia-node-kafka -n ia-node
 ```
 
 Optionally, use an overrides.yaml:
 
 ```sh
-helm install ia-node-kafka oci://ghcr.io/national-digital-twin/helm/ia-node-kafka -n ia-node -f ./overrides.yaml 
+helm install ia-node-kafka oci://ghcr.io/national-node-net/helm/ia-node-kafka -n ia-node -f ./overrides.yaml 
 ```
 
 > [!NOTE]
@@ -129,7 +129,7 @@ This chart provides a few options for managing the default secrets.
 Override the secret value you pass to the chart on a Helm install/upgrade.
 
 ```sh
-helm upgrade ia-node-kafka oci://ghcr.io/national-digital-twin/helm/ia-node-kafka -n ia-node \
+helm upgrade ia-node-kafka oci://ghcr.io/national-node-net/helm/ia-node-kafka -n ia-node \
   --set kafkaCluster.secret.password=ADD_YOUR_PASSWORD_HERE 
 ```
 
@@ -187,7 +187,7 @@ kubectl apply -f ./kafkaclustersecret.yaml -n ia-node
 Lastly, override the values on the install/upgrade replacing the secret name and username to match those you created: 
 
 ```sh 
-helm upgrade ia-node-kafkaCluster oci://ghcr.io/national-digital-twin/helm/ia-node-kafkaCluster -n ia-node \
+helm upgrade ia-node-kafkaCluster oci://ghcr.io/national-node-net/helm/ia-node-kafkaCluster -n ia-node \
 --set kafkaCluster.secret.create=false \
 --set kafkaCluster.secret.name=kafka-auth-config \
 --set kafkaCluster.secret.username=user
